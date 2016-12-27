@@ -1,0 +1,6 @@
+.settings
+.checkstyle
+.classpath
+.project
+src/site/markdown/index.md
+target
