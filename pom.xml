@@ -137,6 +137,7 @@
       <groupId>org.apache.sshd</groupId>
       <artifactId>sshd-core</artifactId>
       <version>${version.sshd-core}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
