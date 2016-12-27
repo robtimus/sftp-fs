@@ -23,7 +23,7 @@ import java.util.Collection;
 import com.jcraft.jsch.SftpException;
 
 /**
- * A factory for creating {@link FileSystemException}s based on replies from an FTP server.
+ * A factory for creating {@link FileSystemException}s based on replies from an SFTP server.
  * <p>
  * It's often not possible to distinguish different types of errors without inspecting the error message.
  * This interface allows users to provide their own mapping, based on {@link SftpException}s.
