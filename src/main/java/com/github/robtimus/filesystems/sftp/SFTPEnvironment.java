@@ -62,6 +62,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
 
     private static final String PROXY = "proxy"; //$NON-NLS-1$
     private static final String USER_INFO = "userInfo"; //$NON-NLS-1$
+    private static final String PASSWORD = "password"; //$NON-NLS-1$
     private static final String CONFIG = "config"; //$NON-NLS-1$
     private static final String SOCKET_FACTORY = "socketFactory"; //$NON-NLS-1$
     private static final String TIMEOUT = "timeOut"; //$NON-NLS-1$
@@ -156,13 +157,25 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
-     * Stores the user info to use. This method must be called to use password authentication.
+     * Stores the user info to use.
      *
      * @param userInfo The user info to use.
      * @return This object.
      */
     public SFTPEnvironment withUserInfo(UserInfo userInfo) {
         put(USER_INFO, userInfo);
+        return this;
+    }
+
+    /**
+     * Stores the password to use.
+     *
+     * @param password The password to use.
+     * @return This object.
+     * @since 1.1
+     */
+    public SFTPEnvironment withPassword(char[] password) {
+        put(PASSWORD, password);
         return this;
     }
 
@@ -181,7 +194,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      * Stores a configuration option to use. This method will add not clear any previously set options, but only add new ones.
      *
      * @param key The configuration key.
-     * @param value The configiration value.
+     * @param value The configuration value.
      * @return This object.
      */
     public SFTPEnvironment withConfig(String key, String value) {
@@ -411,6 +424,16 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         Proxy proxy = FileSystemProviderSupport.getValue(this, PROXY, Proxy.class, null);
         if (proxy != null) {
             session.setProxy(proxy);
+        }
+
+        UserInfo userInfo = FileSystemProviderSupport.getValue(this, USER_INFO, UserInfo.class, null);
+        if (userInfo != null) {
+            session.setUserInfo(userInfo);
+        }
+
+        char[] password = FileSystemProviderSupport.getValue(this, PASSWORD, char[].class, null);
+        if (password != null) {
+            session.setPassword(new String(password));
         }
 
         Properties config = FileSystemProviderSupport.getValue(this, CONFIG, Properties.class, null);

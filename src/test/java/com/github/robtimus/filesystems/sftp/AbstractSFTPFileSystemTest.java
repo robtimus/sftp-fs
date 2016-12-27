@@ -47,7 +47,8 @@ import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.auth.password.AcceptAllPasswordAuthenticator;
+import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.session.ServerSession;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -78,7 +79,12 @@ public abstract class AbstractSFTPFileSystemTest {
         sshServer = SshServer.setUpDefaultServer();
         sshServer.setPort(port);
         sshServer.setKeyPairProvider(new MappedKeyPairProvider(keyPair));
-        sshServer.setPasswordAuthenticator(AcceptAllPasswordAuthenticator.INSTANCE);
+        sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
+            @Override
+            public boolean authenticate(String username, String password, ServerSession session) {
+                return USERNAME.equals(username) && PASSWORD.equals(password);
+            }
+        });
         sshServer.setSubsystemFactories(Arrays.<NamedFactory<Command>>asList(new FixedSftpSubsystem.Factory()));
 
         rootPath = Files.createTempDirectory("sftp-fs");
