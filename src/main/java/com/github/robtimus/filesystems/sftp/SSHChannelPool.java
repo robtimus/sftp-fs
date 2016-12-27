@@ -211,13 +211,13 @@ final class SSHChannelPool {
             try {
                 InputStream in = channel.get(path);
                 refCount++;
-                return new FTPInputStream(path, in, options.deleteOnClose);
+                return new SFTPInputStream(path, in, options.deleteOnClose);
             } catch (SftpException e) {
                 throw exceptionFactory.createNewInputStreamException(path, e);
             }
         }
 
-        private final class FTPInputStream extends InputStream {
+        private final class SFTPInputStream extends InputStream {
 
             private final String path;
             private final InputStream in;
@@ -225,7 +225,7 @@ final class SSHChannelPool {
 
             private boolean open = true;
 
-            private FTPInputStream(String path, InputStream in, boolean deleteOnClose) {
+            private SFTPInputStream(String path, InputStream in, boolean deleteOnClose) {
                 this.path = path;
                 this.in = in;
                 this.deleteOnClose = deleteOnClose;
@@ -292,13 +292,13 @@ final class SSHChannelPool {
             try {
                 OutputStream out = channel.put(path, mode);
                 refCount++;
-                return new FTPOutputStream(path, out, options.deleteOnClose);
+                return new SFTPOutputStream(path, out, options.deleteOnClose);
             } catch (SftpException e) {
                 throw exceptionFactory.createNewOutputStreamException(path, e, options.options);
             }
         }
 
-        private final class FTPOutputStream extends OutputStream {
+        private final class SFTPOutputStream extends OutputStream {
 
             private final String path;
             private final OutputStream out;
@@ -306,7 +306,7 @@ final class SSHChannelPool {
 
             private boolean open = true;
 
-            private FTPOutputStream(String path, OutputStream out, boolean deleteOnClose) {
+            private SFTPOutputStream(String path, OutputStream out, boolean deleteOnClose) {
                 this.path = path;
                 this.out = out;
                 this.deleteOnClose = deleteOnClose;

@@ -48,7 +48,7 @@ import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.SimpleAbstractPath;
 
 /**
- * A path for FTP file systems.
+ * A path for SFTP file systems.
  *
  * @author Rob Spoor
  */

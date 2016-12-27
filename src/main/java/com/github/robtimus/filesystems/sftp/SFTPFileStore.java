@@ -27,7 +27,7 @@ import java.util.Objects;
 import com.github.robtimus.filesystems.Messages;
 
 /**
- * An FTP file system store.
+ * An SFTP file system store.
  *
  * @author Rob Spoor
  */

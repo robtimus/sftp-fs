@@ -75,7 +75,7 @@ import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.SftpATTRS;
 
 /**
- * An FTP file system.
+ * An SFTP file system.
  *
  * @author Rob Spoor
  */
@@ -900,7 +900,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     long getTotalSpace() throws IOException {
-        // FTPClient does not support the total size easily, so only calculate if explicitly requested
+        // JSch does not support the total size easily, so only calculate if explicitly requested
         if (calculateActualTotalSpace) {
             try (Channel channel = channelPool.get()) {
                 return getTotalSize(channel, "/"); //$NON-NLS-1$
@@ -910,12 +910,12 @@ class SFTPFileSystem extends FileSystem {
     }
 
     long getUsableSpace() {
-        // FTPClient does not support the total size
+        // JSch does not support the total size
         return Long.MAX_VALUE;
     }
 
     long getUnallocatedSpace() {
-        // FTPClient does not support the total size
+        // JSch does not support the total size
         return Long.MAX_VALUE;
     }
 

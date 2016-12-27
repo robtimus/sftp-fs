@@ -94,14 +94,14 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private Map<String, Object> map;
 
     /**
-     * Creates a new FTP environment.
+     * Creates a new SFTP environment.
      */
     public SFTPEnvironment() {
         map = new HashMap<>();
     }
 
     /**
-     * Creates a new FTP environment.
+     * Creates a new SFTP environment.
      *
      * @param map The map to wrap.
      */
@@ -337,7 +337,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
-     * Stores the number of client connections to use. This value influences the number of concurrent threads that can access an FTP file system.
+     * Stores the number of client connections to use. This value influences the number of concurrent threads that can access an SFTP file system.
      *
      * @param count The number of client connection to use.
      * @return This object.
