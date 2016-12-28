@@ -48,7 +48,7 @@ import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.SimpleAbstractPath;
 
 /**
- * A path for FTP file systems.
+ * A path for SFTP file systems.
  *
  * @author Rob Spoor
  */
@@ -240,5 +240,17 @@ class SFTPPath extends SimpleAbstractPath {
 
     void setAttribute(String attribute, Object value, LinkOption... options) throws IOException {
         fs.setAttribute(this, attribute, value, options);
+    }
+
+    long getTotalSpace() throws IOException {
+        return fs.getTotalSpace(this);
+    }
+
+    long getUsableSpace() throws IOException {
+        return fs.getUsableSpace(this);
+    }
+
+    long getUnallocatedSpace() throws IOException {
+        return fs.getUnallocatedSpace(this);
     }
 }

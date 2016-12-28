@@ -244,7 +244,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = FileSystemException.class)
-    public void testNewInputStreamFTPFailure() throws IOException {
+    public void testNewInputStreamSFTPFailure() throws IOException {
 
         // failure: file not found
 
@@ -341,7 +341,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = FileSystemException.class)
-    public void testNewOutputStreamExistingFTPFailure() throws IOException {
+    public void testNewOutputStreamExistingSFTPFailure() throws IOException {
         addDirectory("/foo");
         Path bar = addFile("/foo/bar");
         bar.toFile().setReadOnly();
@@ -359,7 +359,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = FileSystemException.class)
-    public void testNewOutputStreamExistingFTPFailureDeleteOnClose() throws IOException {
+    public void testNewOutputStreamExistingSFTPFailureDeleteOnClose() throws IOException {
         addDirectory("/foo");
         Path bar = addFile("/foo/bar");
         bar.toFile().setReadOnly();
@@ -575,7 +575,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = FileSystemException.class)
-    public void testCreateDirectoryFTPFailure() throws IOException {
+    public void testCreateDirectorySFTPFailure() throws IOException {
         // failure: parent does not exist
 
         try {
@@ -630,7 +630,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = FileSystemException.class)
-    public void testDeleteFTPFailure() throws IOException {
+    public void testDeleteSFTPFailure() throws IOException {
         addDirectory("/foo/bar/baz");
 
         // failure: non-empty directory
@@ -736,7 +736,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = NoSuchFileException.class)
-    public void testCopyFTPFailure() throws IOException {
+    public void testCopySFTPFailure() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -963,7 +963,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test(expected = FileSystemException.class)
-    public void testMoveFTPFailure() throws IOException {
+    public void testMoveSFTPFailure() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -1950,17 +1950,25 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
     // SFTPFileSystem.getTotalSpace
 
-    @Ignore("On Windows, retrieving the size of a folder sometimes returns the size of the folder already (but sometimes not)")
     @Test
     public void testGetTotalSpace() throws IOException {
-        Path bar = addFile("/foo/bar");
-        setContents(bar, new byte[1024]);
-        setContents(addFile("/bar/baz"), new byte[1024]);
-        addSymLink("/baz", getPath("/dummy"));
-        addSymLink("/hello", bar);
+        // SshServer does not support statVFS
+        assertEquals(Long.MAX_VALUE, getFileSystem().getTotalSpace(createPath("/")));
+    }
 
-        long expected = getTotalSize();
-        long totalSpace = getFileSystem().getTotalSpace();
-        assertEquals(expected, totalSpace);
+    // SFTPFileSystem.getUsableSpace
+
+    @Test
+    public void testGetUsableSpace() throws IOException {
+        // SshServer does not support statVFS
+        assertEquals(Long.MAX_VALUE, getFileSystem().getUsableSpace(createPath("/")));
+    }
+
+    // SFTPFileSystem.getUnallocatedSpace
+
+    @Test
+    public void testGetUnallocatedSpace() throws IOException {
+        // SshServer does not support statVFS
+        assertEquals(Long.MAX_VALUE, getFileSystem().getUnallocatedSpace(createPath("/")));
     }
 }

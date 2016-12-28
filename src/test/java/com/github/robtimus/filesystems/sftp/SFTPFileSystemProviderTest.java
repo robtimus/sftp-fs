@@ -109,7 +109,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         provider.getPath(uri);
     }
 
-    // FTPFileSystemProvider.getPath
+    // SFTPFileSystemProvider.getPath
 
     @Test
     public void testGetPath() throws IOException {
@@ -156,7 +156,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         provider.getPath(URI.create("sftp://sftp.github.com/"));
     }
 
-    // FTPFileSystemProvider.getFileAttributeView
+    // SFTPFileSystemProvider.getFileAttributeView
 
     @Test
     public void testGetFileAttributeViewBasic() throws IOException {
@@ -172,7 +172,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testGetFileAttributeViewFTP() throws IOException {
+    public void testGetFileAttributeViewPosix() throws IOException {
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         try (SFTPFileSystem fs = (SFTPFileSystem) provider.newFileSystem(getURI(), createEnv())) {

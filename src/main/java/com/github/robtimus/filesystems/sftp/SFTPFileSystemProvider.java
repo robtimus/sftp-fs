@@ -56,7 +56,7 @@ import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
 
 /**
- * A provider for STP file systems.
+ * A provider for SFTP file systems.
  *
  * @author Rob Spoor
  */
