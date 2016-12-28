@@ -73,6 +73,7 @@ import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
 import com.github.robtimus.filesystems.sftp.SSHChannelPool.Channel;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.SftpATTRS;
+import com.jcraft.jsch.SftpStatVFS;
 
 /**
  * An SFTP file system.
@@ -90,22 +91,20 @@ class SFTPFileSystem extends FileSystem {
 
     private final SFTPFileSystemProvider provider;
     private final Iterable<Path> rootDirectories;
-    private final FileStore fileStore;
     private final Iterable<FileStore> fileStores;
 
     private final SSHChannelPool channelPool;
     private final URI uri;
     private final String defaultDirectory;
 
-    private final boolean calculateActualTotalSpace;
-
     private final AtomicBoolean open = new AtomicBoolean(true);
 
     SFTPFileSystem(SFTPFileSystemProvider provider, URI uri, SFTPEnvironment env) throws IOException {
         this.provider = Objects.requireNonNull(provider);
-        this.rootDirectories = Collections.<Path>singleton(new SFTPPath(this, "/")); //$NON-NLS-1$
-        this.fileStore = new SFTPFileStore(this);
-        this.fileStores = Collections.<FileStore>singleton(fileStore);
+
+        SFTPPath rootPath = new SFTPPath(this, "/"); //$NON-NLS-1$
+        this.rootDirectories = Collections.<Path>singleton(rootPath);
+        this.fileStores = Collections.<FileStore>singleton(new SFTPFileStore(rootPath));
 
         this.channelPool = new SSHChannelPool(uri.getHost(), uri.getPort(), env);
         this.uri = Objects.requireNonNull(uri);
@@ -113,8 +112,6 @@ class SFTPFileSystem extends FileSystem {
         try (Channel channel = channelPool.get()) {
             this.defaultDirectory = channel.pwd();
         }
-
-        this.calculateActualTotalSpace = env.calculateActualTotalSpace();
     }
 
     @Override
@@ -152,6 +149,7 @@ class SFTPFileSystem extends FileSystem {
 
     @Override
     public Iterable<FileStore> getFileStores() {
+        // TODO: get the actual file stores, instead of only returning the root file store
         return fileStores;
     }
 
@@ -547,7 +545,7 @@ class SFTPFileSystem extends FileSystem {
         try (Channel channel = channelPool.get()) {
             getAttributes(channel, path, false);
         }
-        return fileStore;
+        return new SFTPFileStore(path);
     }
 
     void checkAccess(SFTPPath path, AccessMode... modes) throws IOException {
@@ -899,41 +897,36 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    long getTotalSpace() throws IOException {
-        // JSch does not support the total size easily, so only calculate if explicitly requested
-        if (calculateActualTotalSpace) {
-            try (Channel channel = channelPool.get()) {
-                return getTotalSize(channel, "/"); //$NON-NLS-1$
-            }
+    long getTotalSpace(SFTPPath path) throws IOException {
+        try (Channel channel = channelPool.get()) {
+            SftpStatVFS stat = channel.statVFS(path.path());
+            // don't use stat.getSize because that uses kilobyte precision
+            return stat.getFragmentSize() * stat.getBlocks();
+        } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
+            // statVFS is not available
+            return Long.MAX_VALUE;
         }
-        return Long.MAX_VALUE;
     }
 
-    long getUsableSpace() {
-        // JSch does not support the total size
-        return Long.MAX_VALUE;
-    }
-
-    long getUnallocatedSpace() {
-        // JSch does not support the total size
-        return Long.MAX_VALUE;
-    }
-
-    private long getTotalSize(Channel channel, String path) throws IOException {
-        long size = 0;
-        List<LsEntry> entries = channel.listFiles(path);
-        for (LsEntry entry : entries) {
-            String filename = entry.getFilename();
-            if (!CURRENT_DIR.equals(filename) && !PARENT_DIR.equals(filename)) {
-                SftpATTRS attributes = entry.getAttrs();
-                if (attributes.isDir()) {
-                    String newPath = "/".equals(path) ? "/" + filename : path + "/" + filename; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                    size += getTotalSize(channel, newPath);
-                } else {
-                    size += attributes.getSize();
-                }
-            }
+    long getUsableSpace(SFTPPath path) throws IOException {
+        try (Channel channel = channelPool.get()) {
+            SftpStatVFS stat = channel.statVFS(path.path());
+            // don't use stat.getAvailForNonRoot because that uses kilobyte precision
+            return stat.getFragmentSize() * stat.getAvailBlocks();
+        } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
+            // statVFS is not available
+            return Long.MAX_VALUE;
         }
-        return size;
+    }
+
+    long getUnallocatedSpace(SFTPPath path) throws IOException {
+        try (Channel channel = channelPool.get()) {
+            SftpStatVFS stat = channel.statVFS(path.path());
+            // don't use stat.getAvail because that uses kilobyte precision
+            return stat.getFragmentSize() * stat.getFreeBlocks();
+        } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
+            // statVFS is not available
+            return Long.MAX_VALUE;
+        }
     }
 }

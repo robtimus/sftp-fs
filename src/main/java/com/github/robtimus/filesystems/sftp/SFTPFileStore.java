@@ -33,15 +33,15 @@ import com.github.robtimus.filesystems.Messages;
  */
 class SFTPFileStore extends FileStore {
 
-    private final SFTPFileSystem fs;
+    private final SFTPPath path;
 
-    SFTPFileStore(SFTPFileSystem fs) {
-        this.fs = Objects.requireNonNull(fs);
+    SFTPFileStore(SFTPPath path) {
+        this.path = Objects.requireNonNull(path);
     }
 
     @Override
     public String name() {
-        return fs.toUri("/").toString(); //$NON-NLS-1$
+        return "/"; //$NON-NLS-1$
     }
 
     @Override
@@ -56,17 +56,17 @@ class SFTPFileStore extends FileStore {
 
     @Override
     public long getTotalSpace() throws IOException {
-        return fs.getTotalSpace();
+        return path.getTotalSpace();
     }
 
     @Override
     public long getUsableSpace() throws IOException {
-        return fs.getUsableSpace();
+        return path.getUsableSpace();
     }
 
     @Override
     public long getUnallocatedSpace() throws IOException {
-        return fs.getUnallocatedSpace();
+        return path.getUnallocatedSpace();
     }
 
     @Override

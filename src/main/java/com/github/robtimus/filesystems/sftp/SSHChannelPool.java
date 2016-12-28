@@ -36,6 +36,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+import com.jcraft.jsch.SftpStatVFS;
 
 /**
  * A pool of SSH channels, allowing multiple commands to be executed concurrently.
@@ -371,9 +372,6 @@ final class SSHChannelPool {
 
         SftpATTRS readAttributes(String path, boolean followLinks) throws IOException {
             try {
-                // Although JSch documentation says that stat does not follow links and lstat does,
-                // section 8.5 of https://tools.ietf.org/id/draft-ietf-secsh-filexfer-13.txt says it's the other way around
-                // A quick experimentation has shown that JSch has it wrong
                 return followLinks ? channel.stat(path) : channel.lstat(path);
             } catch (SftpException e) {
                 throw exceptionFactory.createGetFileException(path, e);
@@ -483,6 +481,18 @@ final class SSHChannelPool {
                 channel.setMtime(path, (int) mtime);
             } catch (SftpException e) {
                 throw exceptionFactory.createSetModificationTimeException(path, e);
+            }
+        }
+
+        SftpStatVFS statVFS(String path) throws IOException {
+            try {
+                return channel.statVFS(path);
+            } catch (SftpException e) {
+                if (e.id == ChannelSftp.SSH_FX_OP_UNSUPPORTED) {
+                    throw new UnsupportedOperationException(e);
+                }
+                // reuse the exception handling for get file
+                throw exceptionFactory.createGetFileException(path, e);
             }
         }
     }

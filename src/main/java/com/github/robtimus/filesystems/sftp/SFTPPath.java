@@ -241,4 +241,16 @@ class SFTPPath extends SimpleAbstractPath {
     void setAttribute(String attribute, Object value, LinkOption... options) throws IOException {
         fs.setAttribute(this, attribute, value, options);
     }
+
+    long getTotalSpace() throws IOException {
+        return fs.getTotalSpace(this);
+    }
+
+    long getUsableSpace() throws IOException {
+        return fs.getUsableSpace(this);
+    }
+
+    long getUnallocatedSpace() throws IOException {
+        return fs.getUnallocatedSpace(this);
+    }
 }

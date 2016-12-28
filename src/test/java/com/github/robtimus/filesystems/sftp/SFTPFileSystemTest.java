@@ -1950,17 +1950,25 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
     // SFTPFileSystem.getTotalSpace
 
-    @Ignore("On Windows, retrieving the size of a folder sometimes returns the size of the folder already (but sometimes not)")
     @Test
     public void testGetTotalSpace() throws IOException {
-        Path bar = addFile("/foo/bar");
-        setContents(bar, new byte[1024]);
-        setContents(addFile("/bar/baz"), new byte[1024]);
-        addSymLink("/baz", getPath("/dummy"));
-        addSymLink("/hello", bar);
+        // SshServer does not support statVFS
+        assertEquals(Long.MAX_VALUE, getFileSystem().getTotalSpace(createPath("/")));
+    }
 
-        long expected = getTotalSize();
-        long totalSpace = getFileSystem().getTotalSpace();
-        assertEquals(expected, totalSpace);
+    // SFTPFileSystem.getUsableSpace
+
+    @Test
+    public void testGetUsableSpace() throws IOException {
+        // SshServer does not support statVFS
+        assertEquals(Long.MAX_VALUE, getFileSystem().getUsableSpace(createPath("/")));
+    }
+
+    // SFTPFileSystem.getUnallocatedSpace
+
+    @Test
+    public void testGetUnallocatedSpace() throws IOException {
+        // SshServer does not support statVFS
+        assertEquals(Long.MAX_VALUE, getFileSystem().getUnallocatedSpace(createPath("/")));
     }
 }

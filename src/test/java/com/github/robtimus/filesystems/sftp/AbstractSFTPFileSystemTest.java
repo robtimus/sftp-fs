@@ -130,8 +130,7 @@ public abstract class AbstractSFTPFileSystemTest {
                 .withHostKeyRepository(TrustAllHostKeyRepository.INSTANCE)
                 .withDefaultDirectory(defaultDir.getFileName().toString())
                 .withClientConnectionCount(1)
-                .withFileSystemExceptionFactory(exceptionFactory)
-                .withActualTotalSpaceCalculation(true);
+                .withFileSystemExceptionFactory(exceptionFactory);
     }
 
     @Before

@@ -365,7 +365,10 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      * @param calculateActualTotalSpace {@code true} if {@link FileStore#getTotalSpace()} should calculate the actual total space by traversing the
      *            file system, or {@code false} otherwise.
      * @return This object.
+     * @deprecated {@link FileStore#getTotalSpace()} does not need to traverse the file system, because that would calculate the total <em>used</em>
+     *             space, not the total space.
      */
+    @Deprecated
     public SFTPEnvironment withActualTotalSpaceCalculation(boolean calculateActualTotalSpace) {
         put(CALCULATE_ACTUAL_TOTAL_SPACE, calculateActualTotalSpace);
         return this;
@@ -383,10 +386,6 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     FileSystemExceptionFactory getExceptionFactory() {
         return FileSystemProviderSupport.getValue(this, FILE_SYSTEM_EXCEPTION_FACTORY, FileSystemExceptionFactory.class,
                 DefaultFileSystemExceptionFactory.INSTANCE);
-    }
-
-    boolean calculateActualTotalSpace() {
-        return FileSystemProviderSupport.getBooleanValue(this, CALCULATE_ACTUAL_TOTAL_SPACE, false);
     }
 
     ChannelSftp openChannel(JSch jsch, String hostname, int port) throws IOException {
