@@ -27,7 +27,6 @@ import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
 import java.nio.file.LinkOption;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -72,7 +71,7 @@ class SFTPPath extends SimpleAbstractPath {
     }
 
     @Override
-    public FileSystem getFileSystem() {
+    public SFTPFileSystem getFileSystem() {
         return fs;
     }
 

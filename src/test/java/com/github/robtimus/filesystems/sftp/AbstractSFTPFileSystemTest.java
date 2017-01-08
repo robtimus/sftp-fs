@@ -68,6 +68,7 @@ public abstract class AbstractSFTPFileSystemTest {
     private static Path defaultDir;
     private static ExceptionFactoryWrapper exceptionFactory;
     private static SFTPFileSystem sftpFileSystem;
+    private static SFTPFileSystem sftpFileSystem2;
 
     @BeforeClass
     public static void setupClass() throws NoSuchAlgorithmException, IOException {
@@ -99,6 +100,7 @@ public abstract class AbstractSFTPFileSystemTest {
         exceptionFactory = new ExceptionFactoryWrapper();
         exceptionFactory.delegate = DefaultFileSystemExceptionFactory.INSTANCE;
         sftpFileSystem = createFileSystem();
+        sftpFileSystem2 = createFileSystem(3);
     }
 
     private static int findFreePort() throws IOException {
@@ -120,6 +122,11 @@ public abstract class AbstractSFTPFileSystemTest {
 
     private static SFTPFileSystem createFileSystem() throws IOException {
         Map<String, ?> env = createEnv();
+        return (SFTPFileSystem) new SFTPFileSystemProvider().newFileSystem(URI.create("sftp://localhost:" + port), env);
+    }
+
+    private static SFTPFileSystem createFileSystem(int clientConnectionCount) throws IOException {
+        Map<String, ?> env = createEnv().withClientConnectionCount(clientConnectionCount);
         return (SFTPFileSystem) new SFTPFileSystemProvider().newFileSystem(URI.create("sftp://localhost:" + port), env);
     }
 
@@ -185,8 +192,16 @@ public abstract class AbstractSFTPFileSystemTest {
         return new SFTPPath(sftpFileSystem, path);
     }
 
+    protected final SFTPPath createPath(SFTPFileSystem fs, String path) {
+        return new SFTPPath(fs, path);
+    }
+
     protected final SFTPFileSystem getFileSystem() {
         return sftpFileSystem;
+    }
+
+    protected final SFTPFileSystem getFileSystem2() {
+        return sftpFileSystem2;
     }
 
     protected final FileSystemExceptionFactory getExceptionFactory() {

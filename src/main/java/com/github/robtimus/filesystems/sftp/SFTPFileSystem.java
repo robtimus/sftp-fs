@@ -17,8 +17,6 @@
 
 package com.github.robtimus.filesystems.sftp;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -416,12 +414,18 @@ class SFTPFileSystem extends FileSystem {
     }
 
     void copy(SFTPPath source, SFTPPath target, CopyOption... options) throws IOException {
+        boolean sameFileSystem = source.getFileSystem() == target.getFileSystem();
         CopyOptions copyOptions = CopyOptions.forCopy(options);
 
         try (Channel channel = channelPool.get()) {
             // get the attributes to determine whether a directory needs to be created or a file needs to be copied
             // Files.copy specifies that for links, the final target must be copied
             SFTPPathAndAttributesPair sourcePair = toRealPath(channel, source, true);
+
+            if (!sameFileSystem) {
+                copyAcrossFileSystems(channel, source, sourcePair.attributes, target, copyOptions);
+                return;
+            }
 
             try {
                 if (sourcePair.path.path().equals(toRealPath(channel, target, true).path.path())) {
@@ -434,61 +438,71 @@ class SFTPFileSystem extends FileSystem {
 
             SftpATTRS targetAttributes = findAttributes(channel, target, false);
 
-            if (!copyOptions.replaceExisting && targetAttributes != null) {
-                throw new FileAlreadyExistsException(target.path());
+            if (targetAttributes != null) {
+                if (copyOptions.replaceExisting) {
+                    channel.delete(target.path(), targetAttributes.isDir());
+                } else {
+                    throw new FileAlreadyExistsException(target.path());
+                }
             }
-
-            // replace existing or the target does not exist
 
             if (sourcePair.attributes.isDir()) {
-                // create an directory, but only if target isn't an empty directory (but not a link to one)
-                if (targetAttributes == null || !isEmptyDirectory(channel, target, targetAttributes)) {
-                    channel.mkdir(target.path());
-                }
+                channel.mkdir(target.path());
             } else {
-                try (Channel channel2 = channelPool.find()) {
-                    if (channel2 == null) {
-                        copyFile(channel, sourcePair, target);
-                    } else {
-                        OpenOptions inOptions = OpenOptions.forNewInputStream(copyOptions.toOpenOptions(StandardOpenOption.READ));
-                        OpenOptions outOptions = OpenOptions
-                                .forNewOutputStream(copyOptions.toOpenOptions(StandardOpenOption.WRITE, StandardOpenOption.CREATE));
-                        try (InputStream in = channel.newInputStream(source.path(), inOptions)) {
-                            channel2.storeFile(target.path(), in, outOptions.options);
-                        }
-                    }
+                try (Channel channel2 = channelPool.getOrCreate()) {
+                    copyFile(channel, source, channel2, target, copyOptions);
                 }
             }
         }
     }
 
-    private boolean isEmptyDirectory(Channel channel, SFTPPath path, SftpATTRS attributes) throws IOException {
-        return attributes.isDir() && channel.isEmptyDir(path.path());
-    }
+    private void copyAcrossFileSystems(Channel sourceChannel, SFTPPath source, SftpATTRS sourceAttributes, SFTPPath target, CopyOptions options)
+            throws IOException {
 
-    @SuppressWarnings("resource")
-    private void copyFile(Channel channel, SFTPPathAndAttributesPair sourcePair, SFTPPath target) throws IOException {
-        LocalFile local = new LocalFile(sourcePair.attributes.getSize());
-        channel.retrieveFile(sourcePair.path.path(), local);
-        channel.storeFile(target.path(), local.getInputStream(), Collections.<OpenOption>emptySet());
-    }
+        try (Channel targetChannel = target.getFileSystem().channelPool.getOrCreate()) {
 
-    // don't use ByteArrayOutputStream directly, because its toByteArray() method creates a copy; instead use it directly
-    private static final class LocalFile extends ByteArrayOutputStream {
+            SftpATTRS targetAttributes = findAttributes(targetChannel, target, false);
 
-        private LocalFile(long size) {
-            super((int) Math.max(0, Math.min(Integer.MAX_VALUE, size)));
+            if (targetAttributes != null) {
+                if (options.replaceExisting) {
+                    targetChannel.delete(target.path(), targetAttributes.isDir());
+                } else {
+                    throw new FileAlreadyExistsException(target.path());
+                }
+            }
+
+            if (sourceAttributes.isDir()) {
+                targetChannel.mkdir(target.path());
+            } else {
+                copyFile(sourceChannel, source, targetChannel, target, options);
+            }
         }
+    }
 
-        private InputStream getInputStream() {
-            return new ByteArrayInputStream(buf, 0, count);
+    private void copyFile(Channel sourceChannel, SFTPPath source, Channel targetChannel, SFTPPath target, CopyOptions options) throws IOException {
+        OpenOptions inOptions = OpenOptions.forNewInputStream(options.toOpenOptions(StandardOpenOption.READ));
+        OpenOptions outOptions = OpenOptions
+                .forNewOutputStream(options.toOpenOptions(StandardOpenOption.WRITE, StandardOpenOption.CREATE));
+        try (InputStream in = sourceChannel.newInputStream(source.path(), inOptions)) {
+            targetChannel.storeFile(target.path(), in, outOptions.options);
         }
     }
 
     void move(SFTPPath source, SFTPPath target, CopyOption... options) throws IOException {
-        CopyOptions copyOptions = CopyOptions.forMove(options);
+        boolean sameFileSystem = source.getFileSystem() == target.getFileSystem();
+        CopyOptions copyOptions = CopyOptions.forMove(sameFileSystem, options);
 
         try (Channel channel = channelPool.get()) {
+            if (!sameFileSystem) {
+                SftpATTRS attributes = getAttributes(channel, source, false);
+                if (attributes.isLink()) {
+                    throw new IOException(SFTPMessages.copyOfSymbolicLinksAcrossFileSystemsNotSupported());
+                }
+                copyAcrossFileSystems(channel, source, attributes, target, copyOptions);
+                channel.delete(source.path(), attributes.isDir());
+                return;
+            }
+
             try {
                 if (isSameFile(channel, source, target)) {
                     // non-op, don't do a thing as specified by Files.move
@@ -516,6 +530,9 @@ class SFTPFileSystem extends FileSystem {
     }
 
     boolean isSameFile(SFTPPath path, SFTPPath path2) throws IOException {
+        if (path.getFileSystem() != path2.getFileSystem()) {
+            return false;
+        }
         if (path.equals(path2)) {
             return true;
         }

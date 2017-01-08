@@ -73,13 +73,13 @@ final class CopyOptions {
         return new CopyOptions(replaceExisting, Arrays.asList(options));
     }
 
-    static CopyOptions forMove(CopyOption... options) {
+    static CopyOptions forMove(boolean sameFileSystem, CopyOption... options) {
         boolean replaceExisting = false;
 
         for (CopyOption option : options) {
             if (option == StandardCopyOption.REPLACE_EXISTING) {
                 replaceExisting = true;
-            } else if (!isIgnoredCopyOption(option)) {
+            } else if (!(option == StandardCopyOption.ATOMIC_MOVE && sameFileSystem) && !isIgnoredCopyOption(option)) {
                 throw Messages.fileSystemProvider().unsupportedCopyOption(option);
             }
         }
@@ -88,7 +88,6 @@ final class CopyOptions {
     }
 
     private static boolean isIgnoredCopyOption(CopyOption option) {
-        return option == StandardCopyOption.ATOMIC_MOVE
-                || option == LinkOption.NOFOLLOW_LINKS;
+        return option == LinkOption.NOFOLLOW_LINKS;
     }
 }

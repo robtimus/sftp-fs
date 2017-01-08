@@ -813,7 +813,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         }
     }
 
-    @Test(expected = AccessDeniedException.class)
+    @Test(expected = FileSystemException.class)
     public void testCopyReplaceNonEmptyDirAllowed() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
@@ -823,7 +823,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         try {
             getFileSystem().copy(createPath("/baz"), createPath("/foo"), options);
         } finally {
-            verify(getExceptionFactory()).createNewOutputStreamException(eq("/foo"), any(SftpException.class), anyCollectionOf(OpenOption.class));
+            verify(getExceptionFactory()).createDeleteException(eq("/foo"), any(SftpException.class), eq(true));
             assertTrue(Files.isDirectory(getPath("/foo")));
             assertTrue(Files.isRegularFile(getPath("/foo/bar")));
             assertTrue(Files.isRegularFile(getPath("/baz")));
@@ -875,11 +875,9 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         addFile("/baz");
 
         CopyOption[] options = {};
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        SFTPEnvironment env = createEnv().withClientConnectionCount(3);
-        try (SFTPFileSystem fs = (SFTPFileSystem) provider.newFileSystem(getURI(), env)) {
-            fs.copy(createPath("/baz"), createPath("/foo/bar"), options);
-        }
+        @SuppressWarnings("resource")
+        SFTPFileSystem fs = getFileSystem2();
+        fs.copy(createPath(fs, "/baz"), createPath(fs, "/foo/bar"), options);
 
         assertTrue(Files.isDirectory(getPath("/foo")));
         assertTrue(Files.isRegularFile(getPath("/foo/bar")));
@@ -909,6 +907,139 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         CopyOption[] options = {};
         getFileSystem().copy(createPath("/baz"), createPath("/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isDirectory(getPath("/foo/bar")));
+        assertTrue(Files.isDirectory(getPath("/baz")));
+
+        assertEquals(0, getChildCount("/foo/bar"));
+    }
+
+    @Test(expected = FileAlreadyExistsException.class)
+    public void testCopyReplaceFileDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addFile("/foo/bar");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        try {
+            getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+        } finally {
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+            assertTrue(Files.isRegularFile(getPath("/baz")));
+        }
+    }
+
+    @Test
+    public void testCopyReplaceFileAllowedDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addFile("/foo/bar");
+        addFile("/baz");
+
+        CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+        getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+        assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+    }
+
+    @Test(expected = FileAlreadyExistsException.class)
+    public void testCopyReplaceNonEmptyDirDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addFile("/foo/bar");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        try {
+            getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo"), options);
+        } finally {
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+            assertTrue(Files.isRegularFile(getPath("/baz")));
+        }
+    }
+
+    @Test(expected = FileSystemException.class)
+    public void testCopyReplaceNonEmptyDirAllowedDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addFile("/foo/bar");
+        addFile("/baz");
+
+        CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+        try {
+            getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo"), options);
+        } finally {
+            verify(getExceptionFactory()).createDeleteException(eq("/foo"), any(SftpException.class), eq(true));
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+            assertTrue(Files.isRegularFile(getPath("/baz")));
+        }
+    }
+
+    @Test(expected = FileAlreadyExistsException.class)
+    public void testCopyReplaceEmptyDirDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        try {
+            getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo"), options);
+        } finally {
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isRegularFile(getPath("/baz")));
+        }
+    }
+
+    @Test
+    public void testCopyReplaceEmptyDirAllowedDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addDirectory("/baz");
+
+        CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+        getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isDirectory(getPath("/foo")));
+    }
+
+    @Test
+    public void testCopyFileDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+        assertTrue(Files.isRegularFile(getPath("/baz")));
+    }
+
+    @Test
+    public void testCopyEmptyDirDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addDirectory("/baz");
+
+        CopyOption[] options = {};
+        getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isDirectory(getPath("/foo/bar")));
+        assertTrue(Files.isDirectory(getPath("/baz")));
+
+        assertEquals(0, getChildCount("/foo/bar"));
+    }
+
+    @Test
+    public void testCopyNonEmptyDirDifferentFileSystems() throws IOException {
+        addDirectory("/foo");
+        addDirectory("/baz");
+        addFile("/baz/qux");
+
+        CopyOption[] options = {};
+        getFileSystem().copy(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
 
         assertTrue(Files.isDirectory(getPath("/foo")));
         assertTrue(Files.isDirectory(getPath("/foo/bar")));
@@ -1116,6 +1247,112 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertFalse(Files.exists(getPath("/foo")));
             assertTrue(Files.isDirectory(getPath("/baz")));
             assertTrue(Files.isRegularFile(getPath("/baz/bar")));
+        }
+    }
+
+    @Test(expected = FileAlreadyExistsException.class)
+    public void testMoveReplaceFileDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addDirectory("/foo/bar");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        try {
+            getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+        } finally {
+            verify(getExceptionFactory(), never()).createMoveException(anyString(), anyString(), any(SftpException.class));
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isDirectory(getPath("/foo/bar")));
+            assertTrue(Files.isRegularFile(getPath("/baz")));
+        }
+    }
+
+    @Test
+    public void testMoveReplaceFileAllowedDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addFile("/foo/bar");
+        addFile("/baz");
+
+        CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+        getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+        assertFalse(Files.exists(getPath("/baz")));
+    }
+
+    @Test(expected = FileAlreadyExistsException.class)
+    public void testMoveReplaceEmptyDirDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        try {
+            getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo"), options);
+        } finally {
+            verify(getExceptionFactory(), never()).createMoveException(anyString(), anyString(), any(SftpException.class));
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isRegularFile(getPath("/baz")));
+        }
+    }
+
+    public void testMoveReplaceEmptyDirAllowedDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addFile("/baz");
+
+        CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+        getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo"), options);
+
+        assertTrue(Files.isRegularFile(getPath("/foo")));
+        assertFalse(Files.exists(getPath("/baz")));
+    }
+
+    @Test
+    public void testMoveFileDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addFile("/baz");
+
+        CopyOption[] options = {};
+        getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isRegularFile(getPath("/foo/bar")));
+        assertFalse(Files.exists(getPath("/baz")));
+    }
+
+    @Test
+    public void testMoveEmptyDirDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addDirectory("/baz");
+
+        CopyOption[] options = {};
+        getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+
+        assertTrue(Files.isDirectory(getPath("/foo")));
+        assertTrue(Files.isDirectory(getPath("/foo/bar")));
+        assertFalse(Files.exists(getPath("/baz")));
+    }
+
+    @Test(expected = FileSystemException.class)
+    public void testMoveNonEmptyDirDifferentFileSystem() throws IOException {
+        addDirectory("/foo");
+        addDirectory("/baz");
+        addFile("/baz/qux");
+
+        CopyOption[] options = {};
+        try {
+            getFileSystem().move(createPath("/baz"), createPath(getFileSystem2(), "/foo/bar"), options);
+        } finally {
+            verify(getExceptionFactory()).createDeleteException(eq("/baz"), any(SftpException.class), eq(true));
+            assertTrue(Files.isDirectory(getPath("/baz")));
+            assertTrue(Files.isRegularFile(getPath("/baz/qux")));
+            assertEquals(1, getChildCount("/baz"));
+
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isDirectory(getPath("/foo/bar")));
+            assertFalse(Files.isRegularFile(getPath("/foo/bar/qux")));
+            assertEquals(1, getChildCount("/foo"));
+            assertEquals(0, getChildCount("/foo/bar"));
         }
     }
 

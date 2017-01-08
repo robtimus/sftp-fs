@@ -64,7 +64,7 @@ final class SSHChannelPool {
         this.pool = new ArrayBlockingQueue<>(poolSize);
 
         for (int i = 0; i < poolSize; i++) {
-            pool.add(new Channel());
+            pool.add(new Channel(true));
         }
     }
 
@@ -72,7 +72,7 @@ final class SSHChannelPool {
         try {
             Channel channel = pool.take();
             if (!channel.isConnected()) {
-                channel = new Channel();
+                channel = new Channel(true);
             }
             channel.increaseRefCount();
             return channel;
@@ -86,14 +86,15 @@ final class SSHChannelPool {
         }
     }
 
-    Channel find() throws IOException {
+    Channel getOrCreate() throws IOException {
         Channel channel = pool.poll();
-        if (channel != null && !channel.isConnected()) {
-            channel = new Channel();
+        if (channel == null) {
+            return new Channel(false);
         }
-        if (channel != null) {
-            channel.increaseRefCount();
+        if (!channel.isConnected()) {
+            channel = new Channel(true);
         }
+        channel.increaseRefCount();
         return channel;
     }
 
@@ -149,12 +150,14 @@ final class SSHChannelPool {
 
     final class Channel implements Closeable {
 
-        private ChannelSftp channel;
+        private final ChannelSftp channel;
+        private final boolean pooled;
 
         private int refCount = 0;
 
-        private Channel() throws IOException {
+        private Channel(boolean pooled) throws IOException {
             this.channel = env.openChannel(jsch, hostname, port);
+            this.pooled = pooled;
         }
 
         private void increaseRefCount() {
@@ -193,7 +196,11 @@ final class SSHChannelPool {
         @Override
         public void close() throws IOException {
             if (decreaseRefCount() == 0) {
-                returnToPool(this);
+                if (pooled) {
+                    returnToPool(this);
+                } else {
+                    disconnect();
+                }
             }
         }
 
@@ -346,19 +353,15 @@ final class SSHChannelPool {
             }
         }
 
-        private void finalizeStream() {
+        private void finalizeStream() throws IOException {
             assert refCount > 0;
 
             if (decreaseRefCount() == 0) {
-                returnToPool(Channel.this);
-            }
-        }
-
-        void retrieveFile(String path, OutputStream local) throws IOException {
-            try {
-                channel.get(path, local);
-            } catch (SftpException e) {
-                throw exceptionFactory.createNewInputStreamException(path, e);
+                if (pooled) {
+                    returnToPool(Channel.this);
+                } else {
+                    disconnect();
+                }
             }
         }
 
@@ -401,27 +404,6 @@ final class SSHChannelPool {
                 throw exceptionFactory.createListFilesException(path, e);
             }
             return entries;
-        }
-
-        boolean isEmptyDir(String path) throws IOException {
-            final boolean[] result = { true };
-            LsEntrySelector selector = new LsEntrySelector() {
-                @Override
-                public int select(LsEntry entry) {
-                    String filename = entry.getFilename();
-                    if (!".".equals(filename) && !"..".equals(filename)) { //$NON-NLS-1$ //$NON-NLS-2$
-                        result[0] = false;
-                        return BREAK;
-                    }
-                    return CONTINUE;
-                }
-            };
-            try {
-                channel.ls(path, selector);
-            } catch (SftpException e) {
-                throw exceptionFactory.createListFilesException(path, e);
-            }
-            return result[0];
         }
 
         void mkdir(String path) throws IOException {

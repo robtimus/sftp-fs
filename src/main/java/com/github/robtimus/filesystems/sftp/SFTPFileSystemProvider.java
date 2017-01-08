@@ -277,10 +277,8 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      * This method works in exactly the manner specified by the {@link Files#copy(Path, Path, CopyOption...)} method except that both the source and
      * target paths must be associated with this provider.
      * <p>
-     * Because server-to-server is not necessarily supported, this provider will copy files by first downloading them, then uploading them to the new
-     * location. Be warned that this could cause issues with large files. It is advised to only use this method with small files.
-     * <p>
-     * Most of the standard copy options are supported. {@link StandardCopyOption#COPY_ATTRIBUTES} is not supported though.
+     * Most of the standard copy options are supported. {@link StandardCopyOption#COPY_ATTRIBUTES} and {@link StandardCopyOption#ATOMIC_MOVE} are not
+     * supported though.
      */
     @Override
     public void copy(Path source, Path target, CopyOption... options) throws IOException {
@@ -292,8 +290,8 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      * This method works in exactly the manner specified by the {@link Files#move(Path, Path, CopyOption...)} method except that both the source and
      * target paths must be associated with this provider.
      * <p>
-     * Unlike {@link #copy(Path, Path, CopyOption...)}, this provider does not need to download files before moving them.
-     * It may delete the target path if necessary before moving the source path though.
+     * Most of the standard copy options are supported. {@link StandardCopyOption#COPY_ATTRIBUTES} is not supported though.
+     * {@link StandardCopyOption#ATOMIC_MOVE} is only supported if the paths have the same file system.
      */
     @Override
     public void move(Path source, Path target, CopyOption... options) throws IOException {
