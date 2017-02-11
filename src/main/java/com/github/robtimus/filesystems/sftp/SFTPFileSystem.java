@@ -167,30 +167,13 @@ class SFTPFileSystem extends FileSystem {
 
     @Override
     public PathMatcher getPathMatcher(String syntaxAndPattern) {
-        final int index = syntaxAndPattern.indexOf(':');
-        if (index == -1) {
-            throw Messages.pathMatcher().syntaxNotFound(syntaxAndPattern);
-        }
-        String syntax = syntaxAndPattern.substring(0, index);
-        String expression = syntaxAndPattern.substring(index + 1);
-
-        final Pattern pattern = createPattern(syntax, expression);
+        final Pattern pattern = PathMatcherSupport.toPattern(syntaxAndPattern);
         return new PathMatcher() {
             @Override
             public boolean matches(Path path) {
                 return pattern.matcher(path.toString()).matches();
             }
         };
-    }
-
-    private Pattern createPattern(String syntax, String expression) {
-        if ("glob".equals(syntax)) { //$NON-NLS-1$
-            return PathMatcherSupport.toGlobPattern(expression);
-        }
-        if ("regex".equals(syntax)) { //$NON-NLS-1$
-            return Pattern.compile(expression);
-        }
-        throw Messages.pathMatcher().unsupportedPathMatcherSyntax(syntax);
     }
 
     @Override
