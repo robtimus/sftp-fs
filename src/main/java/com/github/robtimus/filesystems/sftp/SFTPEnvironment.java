@@ -72,6 +72,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String SERVER_ALIVE_COUNTMAX = "serverAliveCountMax"; //$NON-NLS-1$
     private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
     private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
+    private static final String HOST_PREFERRED_AUTHENTICATIONS = "preferredAuthentications"; //$NON-NLS-1$
     // don't support port forwarding, X11
 
     // ChannelSession
@@ -485,6 +486,11 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
         if (hostKeyRepository != null) {
             session.setHostKeyRepository(hostKeyRepository);
+        }
+
+        String preferredAuthentications = FileSystemProviderSupport.getValue(this, HOST_PREFERRED_AUTHENTICATIONS, String.class, null);
+        if (preferredAuthentications != null) {
+            session.setConfig("PreferredAuthentications", preferredAuthentications); //$NON-NLS-1$
         }
     }
 
