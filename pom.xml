@@ -86,6 +86,7 @@
     <version.plugin.dependency>2.10</version.plugin.dependency>
     <version.plugin.deploy>2.8.2</version.plugin.deploy>
     <version.plugin.gpg>1.6</version.plugin.gpg>
+    <version.plugin.nexus-staging>1.6.8</version.plugin.nexus-staging>
     <version.plugin.info-reports>2.9</version.plugin.info-reports>
     <version.plugin.install>2.5.2</version.plugin.install>
     <!-- do not use 3.0.1 or 3.0.2 to prevent error "org.codehaus.plexus.archiver.jar.Manifest.write(java.io.PrintWriter)" -->
@@ -358,6 +359,11 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
         <version>${version.plugin.release}</version>
+        <configuration>
+          <useReleaseProfile>false</useReleaseProfile>
+          <releaseProfiles>release</releaseProfiles>
+          <goals>deploy</goals>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -372,6 +378,18 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>${version.plugin.nexus-staging}</version>
+        <extensions>true</extensions>
+        <configuration>
+          <serverId>ossrh</serverId>
+          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+          <autoReleaseAfterClose>true</autoReleaseAfterClose>
+        </configuration>
       </plugin>
 
       <plugin>
