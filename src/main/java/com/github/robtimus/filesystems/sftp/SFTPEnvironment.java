@@ -420,32 +420,32 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     void initialize(Session session) throws IOException {
-        Proxy proxy = FileSystemProviderSupport.getValue(this, PROXY, Proxy.class, null);
-        if (proxy != null) {
+        if (containsKey(PROXY)) {
+            Proxy proxy = FileSystemProviderSupport.getValue(this, PROXY, Proxy.class, null);
             session.setProxy(proxy);
         }
 
-        UserInfo userInfo = FileSystemProviderSupport.getValue(this, USER_INFO, UserInfo.class, null);
-        if (userInfo != null) {
+        if (containsKey(USER_INFO)) {
+            UserInfo userInfo = FileSystemProviderSupport.getValue(this, USER_INFO, UserInfo.class, null);
             session.setUserInfo(userInfo);
         }
 
-        char[] password = FileSystemProviderSupport.getValue(this, PASSWORD, char[].class, null);
-        if (password != null) {
+        if (containsKey(PASSWORD)) {
+            char[] password = FileSystemProviderSupport.getValue(this, PASSWORD, char[].class, null);
             session.setPassword(new String(password));
         }
 
-        Properties config = FileSystemProviderSupport.getValue(this, CONFIG, Properties.class, null);
-        if (config != null) {
+        if (containsKey(CONFIG)) {
+            Properties config = FileSystemProviderSupport.getValue(this, CONFIG, Properties.class, null);
             session.setConfig(config);
         }
 
-        SocketFactory socketFactory = FileSystemProviderSupport.getValue(this, SOCKET_FACTORY, SocketFactory.class, null);
-        if (socketFactory != null) {
+        if (containsKey(SOCKET_FACTORY)) {
+            SocketFactory socketFactory = FileSystemProviderSupport.getValue(this, SOCKET_FACTORY, SocketFactory.class, null);
             session.setSocketFactory(socketFactory);
         }
 
-        if (get(TIMEOUT) != null) {
+        if (containsKey(TIMEOUT)) {
             int timeout = FileSystemProviderSupport.getIntValue(this, TIMEOUT);
             try {
                 session.setTimeout(timeout);
@@ -454,17 +454,17 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
             }
         }
 
-        String clientVersion = FileSystemProviderSupport.getValue(this, CLIENT_VERSION, String.class, null);
-        if (clientVersion != null) {
+        if (containsKey(CLIENT_VERSION)) {
+            String clientVersion = FileSystemProviderSupport.getValue(this, CLIENT_VERSION, String.class, null);
             session.setClientVersion(clientVersion);
         }
 
-        String hostKeyAlias = FileSystemProviderSupport.getValue(this, HOST_KEY_ALIAS, String.class, null);
-        if (hostKeyAlias != null) {
+        if (containsKey(HOST_KEY_ALIAS)) {
+            String hostKeyAlias = FileSystemProviderSupport.getValue(this, HOST_KEY_ALIAS, String.class, null);
             session.setHostKeyAlias(hostKeyAlias);
         }
 
-        if (get(SERVER_ALIVE_INTERVAL) != null) {
+        if (containsKey(SERVER_ALIVE_INTERVAL)) {
             int interval = FileSystemProviderSupport.getIntValue(this, SERVER_ALIVE_INTERVAL);
             try {
                 session.setServerAliveInterval(interval);
@@ -472,25 +472,25 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 throw asFileSystemException(e);
             }
         }
-        if (get(SERVER_ALIVE_COUNTMAX) != null) {
+        if (containsKey(SERVER_ALIVE_COUNTMAX)) {
             int count = FileSystemProviderSupport.getIntValue(this, SERVER_ALIVE_COUNTMAX);
             session.setServerAliveCountMax(count);
         }
 
-        IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
-        if (identityRepository != null) {
+        if (containsKey(IDENTITY_REPOSITORY)) {
+            IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
             session.setIdentityRepository(identityRepository);
         }
 
-        HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
-        if (hostKeyRepository != null) {
+        if (containsKey(HOST_KEY_REPOSITORY)) {
+            HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
             session.setHostKeyRepository(hostKeyRepository);
         }
     }
 
     ChannelSftp connect(Session session) throws IOException {
         try {
-            if (get(CONNECT_TIMEOUT) != null) {
+            if (containsKey(CONNECT_TIMEOUT)) {
                 int connectTimeout = FileSystemProviderSupport.getIntValue(this, CONNECT_TIMEOUT);
                 session.connect(connectTimeout);
             } else {
@@ -504,13 +504,13 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     void initializePreConnect(ChannelSftp channel) throws IOException {
-        if (get(AGENT_FORWARDING) != null) {
+        if (containsKey(AGENT_FORWARDING)) {
             boolean forwarding = FileSystemProviderSupport.getBooleanValue(this, AGENT_FORWARDING);
             channel.setAgentForwarding(forwarding);
         }
 
-        String filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, String.class, null);
-        if (filenameEncoding != null) {
+        if (containsKey(FILENAME_ENCODING)) {
+            String filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, String.class, null);
             try {
                 channel.setFilenameEncoding(filenameEncoding);
             } catch (SftpException e) {
@@ -521,7 +521,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
 
     void connect(ChannelSftp channel) throws IOException {
         try {
-            if (get(CONNECT_TIMEOUT) != null) {
+            if (containsKey(CONNECT_TIMEOUT)) {
                 int connectTimeout = FileSystemProviderSupport.getIntValue(this, CONNECT_TIMEOUT);
                 channel.connect(connectTimeout);
             } else {
