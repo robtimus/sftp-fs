@@ -63,16 +63,34 @@ final class SSHChannelPool {
         final int poolSize = env.getClientConnectionCount();
         this.pool = new ArrayBlockingQueue<>(poolSize);
 
-        for (int i = 0; i < poolSize; i++) {
-            pool.add(new Channel(true));
+        try {
+            for (int i = 0; i < poolSize; i++) {
+                pool.add(new Channel(true));
+            }
+        } catch (IOException e) {
+            // creating the pool failed, disconnect all channels
+            for (Channel channel : pool) {
+                try {
+                    channel.disconnect();
+                } catch (IOException e2) {
+                    e.addSuppressed(e2);
+                }
+            }
+            throw e;
         }
     }
 
     Channel get() throws IOException {
         try {
             Channel channel = pool.take();
-            if (!channel.isConnected()) {
-                channel = new Channel(true);
+            try {
+                if (!channel.isConnected()) {
+                    channel = new Channel(true);
+                }
+            } catch (final Exception e) {
+                // could not create a new channel; re-add the broken channel to the pool to prevent pool starvation
+                pool.add(channel);
+                throw e;
             }
             channel.increaseRefCount();
             return channel;
@@ -89,10 +107,17 @@ final class SSHChannelPool {
     Channel getOrCreate() throws IOException {
         Channel channel = pool.poll();
         if (channel == null) {
+            // nothing was taken from the pool, so no risk of pool starvation if creating the channel fails
             return new Channel(false);
         }
-        if (!channel.isConnected()) {
-            channel = new Channel(true);
+        try {
+            if (!channel.isConnected()) {
+                channel = new Channel(true);
+            }
+        } catch (final Exception e) {
+            // could not create a new channel; re-add the broken channel to the pool to prevent pool starvation
+            pool.add(channel);
+            throw e;
         }
         channel.increaseRefCount();
         return channel;
@@ -176,12 +201,21 @@ final class SSHChannelPool {
                 channel.getSession().sendKeepAliveMsg();
             } catch (Exception e) {
                 // can't be less generic as sendKeepAliveMsg declares to throw Exception
-                throw asFileSystemException(e);
+                throw asIOException(e);
             }
         }
 
         private boolean isConnected() {
-            return channel.isConnected();
+            if (channel.isConnected()) {
+                try {
+                    channel.getSession().sendKeepAliveMsg();
+                    return true;
+                } catch (@SuppressWarnings("unused") Exception e) {
+                    // the keep alive failed - treat as not connected, and actually disconnect quietly
+                    disconnectQuietly();
+                }
+            }
+            return false;
         }
 
         private void disconnect() throws IOException {
@@ -189,7 +223,16 @@ final class SSHChannelPool {
             try {
                 channel.getSession().disconnect();
             } catch (JSchException e) {
-                throw asFileSystemException(e);
+                throw asIOException(e);
+            }
+        }
+
+        private void disconnectQuietly() {
+            channel.disconnect();
+            try {
+                channel.getSession().disconnect();
+            } catch (@SuppressWarnings("unused") JSchException e) {
+                // ignore
             }
         }
 
@@ -208,7 +251,7 @@ final class SSHChannelPool {
             try {
                 return channel.pwd();
             } catch (SftpException e) {
-                throw asFileSystemException(e);
+                throw asIOException(e);
             }
         }
 
@@ -479,9 +522,9 @@ final class SSHChannelPool {
         }
     }
 
-    FileSystemException asFileSystemException(Exception e) throws FileSystemException {
-        if (e instanceof FileSystemException) {
-            throw (FileSystemException) e;
+    IOException asIOException(Exception e) throws IOException {
+        if (e instanceof IOException) {
+            throw (IOException) e;
         }
         FileSystemException exception = new FileSystemException(null, null, e.getMessage());
         exception.initCause(e);
