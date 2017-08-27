@@ -65,6 +65,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String PASSWORD = "password"; //$NON-NLS-1$
     private static final String CONFIG = "config"; //$NON-NLS-1$
     private static final String SOCKET_FACTORY = "socketFactory"; //$NON-NLS-1$
+    // TIMEOUT should have been timeOut, but that's a breaking change...
     private static final String TIMEOUT = "timeOut"; //$NON-NLS-1$
     private static final String CLIENT_VERSION = "clientVersion"; //$NON-NLS-1$
     private static final String HOST_KEY_ALIAS = "hostKeyAlias"; //$NON-NLS-1$
