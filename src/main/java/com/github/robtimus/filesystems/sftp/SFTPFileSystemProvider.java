@@ -140,7 +140,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         return fs.getPath(uri.getPath());
     }
 
-    private SFTPFileSystem getExistingFileSystem(URI uri) throws FileSystemNotFoundException {
+    private SFTPFileSystem getExistingFileSystem(URI uri) {
         URI normalizedURI = normalizeWithoutPassword(uri);
         synchronized (fileSystems) {
             SFTPFileSystem fs = fileSystems.get(normalizedURI);
