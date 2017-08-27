@@ -85,7 +85,7 @@ public class SFTPEnvironmentSetterTest {
                 { "withDefaultDirectory", "defaultDir", "/", },
                 { "withClientConnectionCount", "clientConnectionCount", 5, },
                 { "withFileSystemExceptionFactory", "fileSystemExceptionFactory", DefaultFileSystemExceptionFactory.INSTANCE, },
-                { "withActualTotalSpaceCalculation", "actualTotalSpaceCalculation", false, },
+                { "withActualTotalSpaceCalculation", "calculateActualTotalSpace", false, },
         };
         return Arrays.asList(parameters);
     }
