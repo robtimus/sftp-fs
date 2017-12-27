@@ -18,6 +18,7 @@
 package com.github.robtimus.filesystems.sftp;
 
 import static org.junit.Assert.assertEquals;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -80,6 +81,7 @@ public class SFTPEnvironmentSetterTest {
                 { "withServerAliveCountMax", "serverAliveCountMax", 5, },
                 { "withIdentityRepository", "identityRepository", new TestIdentityRepository(), },
                 { "withHostKeyRepository", "hostKeyRepository", new TestHostKeyRepository(), },
+                { "withIdentity", "identity", new File("id_rsa.pub"), },
                 { "withAgentForwarding", "agentForwarding", false, },
                 { "withFilenameEncoding", "filenameEncoding", "UTF-8", },
                 { "withDefaultDirectory", "defaultDir", "/", },
