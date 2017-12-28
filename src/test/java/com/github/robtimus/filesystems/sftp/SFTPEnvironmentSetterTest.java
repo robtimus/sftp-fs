@@ -18,27 +18,19 @@
 package com.github.robtimus.filesystems.sftp;
 
 import static org.junit.Assert.assertEquals;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.Vector;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import com.jcraft.jsch.HostKey;
-import com.jcraft.jsch.HostKeyRepository;
-import com.jcraft.jsch.IdentityRepository;
+import com.github.robtimus.filesystems.sftp.SFTPEnvironmentTest.TestHostKeyRepository;
+import com.github.robtimus.filesystems.sftp.SFTPEnvironmentTest.TestIdentityRepository;
+import com.github.robtimus.filesystems.sftp.SFTPEnvironmentTest.TestSocketFactory;
 import com.jcraft.jsch.ProxyHTTP;
-import com.jcraft.jsch.SocketFactory;
-import com.jcraft.jsch.UserInfo;
 
 @RunWith(Parameterized.class)
 @SuppressWarnings({ "nls", "javadoc" })
@@ -99,94 +91,5 @@ public class SFTPEnvironmentSetterTest {
         setter.invoke(env, propertyValue);
 
         assertEquals(Collections.singletonMap(propertyName, propertyValue), env);
-    }
-
-    private static final class TestSocketFactory implements SocketFactory {
-
-        @Override
-        public Socket createSocket(String host, int port) throws IOException, UnknownHostException {
-            return null;
-        }
-
-        @Override
-        public InputStream getInputStream(Socket socket) throws IOException {
-            return null;
-        }
-
-        @Override
-        public OutputStream getOutputStream(Socket socket) throws IOException {
-            return null;
-        }
-    }
-
-    private static final class TestIdentityRepository implements IdentityRepository {
-
-        @Override
-        public String getName() {
-            return null;
-        }
-
-        @Override
-        public int getStatus() {
-            return 0;
-        }
-
-        @Override
-        public Vector<?> getIdentities() {
-            return null;
-        }
-
-        @Override
-        public boolean add(byte[] identity) {
-            return false;
-        }
-
-        @Override
-        public boolean remove(byte[] blob) {
-            return false;
-        }
-
-        @Override
-        public void removeAll() {
-            // does nothing
-        }
-    }
-
-    private static final class TestHostKeyRepository implements HostKeyRepository {
-
-        @Override
-        public int check(String host, byte[] key) {
-            return 0;
-        }
-
-        @Override
-        public void add(HostKey hostkey, UserInfo ui) {
-            // does nothing
-        }
-
-        @Override
-        public void remove(String host, String type) {
-            // does nothing
-        }
-
-        @Override
-        public void remove(String host, String type, byte[] key) {
-            // does nothing
-        }
-
-        @Override
-        public String getKnownHostsRepositoryID() {
-            return null;
-        }
-
-        @Override
-        public HostKey[] getHostKey() {
-            return null;
-        }
-
-        @Override
-        public HostKey[] getHostKey(String host, String type) {
-            return null;
-        }
     }
 }

@@ -45,7 +45,7 @@ import com.jcraft.jsch.SftpStatVFS;
  */
 final class SSHChannelPool {
 
-    private final JSch jsch = new JSch();
+    private final JSch jsch;
 
     private final String hostname;
     private final int port;
@@ -56,6 +56,8 @@ final class SSHChannelPool {
     private final BlockingQueue<Channel> pool;
 
     SSHChannelPool(String hostname, int port, SFTPEnvironment env) throws IOException {
+        jsch = env.createJSch();
+
         this.hostname = hostname;
         this.port = port;
         this.env = env.clone();

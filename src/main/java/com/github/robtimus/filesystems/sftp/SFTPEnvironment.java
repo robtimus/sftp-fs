@@ -65,12 +65,12 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String PASSWORD = "password"; //$NON-NLS-1$
     private static final String CONFIG = "config"; //$NON-NLS-1$
     private static final String SOCKET_FACTORY = "socketFactory"; //$NON-NLS-1$
-    // TIMEOUT should have been timeOut, but that's a breaking change...
+    // timeOut should have been timeout, but that's a breaking change...
     private static final String TIMEOUT = "timeOut"; //$NON-NLS-1$
     private static final String CLIENT_VERSION = "clientVersion"; //$NON-NLS-1$
     private static final String HOST_KEY_ALIAS = "hostKeyAlias"; //$NON-NLS-1$
     private static final String SERVER_ALIVE_INTERVAL = "serverAliveInterval"; //$NON-NLS-1$
-    private static final String SERVER_ALIVE_COUNTMAX = "serverAliveCountMax"; //$NON-NLS-1$
+    private static final String SERVER_ALIVE_COUNT_MAX = "serverAliveCountMax"; //$NON-NLS-1$
     private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
     private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
     // don't support port forwarding, X11
@@ -275,7 +275,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      * @return This object.
      */
     public SFTPEnvironment withServerAliveCountMax(int count) {
-        put(SERVER_ALIVE_COUNTMAX, count);
+        put(SERVER_ALIVE_COUNT_MAX, count);
         return this;
     }
 
@@ -389,6 +389,24 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 DefaultFileSystemExceptionFactory.INSTANCE);
     }
 
+    JSch createJSch() {
+        JSch jsch = new JSch();
+        initialize(jsch);
+        return jsch;
+    }
+
+    void initialize(JSch jsch) {
+        if (containsKey(IDENTITY_REPOSITORY)) {
+            IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
+            jsch.setIdentityRepository(identityRepository);
+        }
+
+        if (containsKey(HOST_KEY_REPOSITORY)) {
+            HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
+            jsch.setHostKeyRepository(hostKeyRepository);
+        }
+    }
+
     ChannelSftp openChannel(JSch jsch, String hostname, int port) throws IOException {
         Session session = getSession(jsch, hostname, port);
         try {
@@ -473,19 +491,9 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 throw asFileSystemException(e);
             }
         }
-        if (containsKey(SERVER_ALIVE_COUNTMAX)) {
-            int count = FileSystemProviderSupport.getIntValue(this, SERVER_ALIVE_COUNTMAX);
+        if (containsKey(SERVER_ALIVE_COUNT_MAX)) {
+            int count = FileSystemProviderSupport.getIntValue(this, SERVER_ALIVE_COUNT_MAX);
             session.setServerAliveCountMax(count);
-        }
-
-        if (containsKey(IDENTITY_REPOSITORY)) {
-            IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
-            session.setIdentityRepository(identityRepository);
-        }
-
-        if (containsKey(HOST_KEY_REPOSITORY)) {
-            HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
-            session.setHostKeyRepository(hostKeyRepository);
         }
     }
 
