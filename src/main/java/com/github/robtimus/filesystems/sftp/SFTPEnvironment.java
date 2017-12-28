@@ -25,13 +25,16 @@ import java.nio.file.FileStore;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
+import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.HostKeyRepository;
 import com.jcraft.jsch.IdentityRepository;
@@ -61,6 +64,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
 
     // JSch
     private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
+    private static final String IDENTITIES = "identities"; //$NON-NLS-1$
     private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
     private static final String KNOWN_HOSTS = "knownHosts"; //$NON-NLS-1$
 
@@ -189,6 +193,8 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      *
      * @param config The configuration options to use.
      * @return This object.
+     * @throws NullPointerException if the given properties object is {@code null}.
+     * @see #withConfig(String, String)
      */
     public SFTPEnvironment withConfig(Properties config) {
         getConfig().putAll(config);
@@ -201,6 +207,8 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      * @param key The configuration key.
      * @param value The configuration value.
      * @return This object.
+     * @throws NullPointerException if the given key or value is {@code null}.
+     * @see #withConfig(Properties)
      */
     public SFTPEnvironment withConfig(String key, String value) {
         getConfig().setProperty(key, value);
@@ -295,6 +303,70 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
+     * Stores an identity to use. This method will add not clear any previously set identities, but only add new ones.
+     *
+     * @param identity The identity to use.
+     * @return This object.
+     * @throws NullPointerException If the given identity is {@code null}.
+     * @see #withIdentities(Identity...)
+     * @see #withIdentities(Collection)
+     * @since 1.2
+     */
+    public SFTPEnvironment withIdentity(Identity identity) {
+        Objects.requireNonNull(identity);
+        getIdentities().add(identity);
+        return this;
+    }
+
+    /**
+     * Stores several identity to use. This method will add not clear any previously set identities, but only add new ones.
+     *
+     * @param identities The identities to use.
+     * @return This object.
+     * @throws NullPointerException If any of the given identity is {@code null}.
+     * @see #withIdentity(Identity)
+     * @see #withIdentities(Collection)
+     * @since 1.2
+     */
+    public SFTPEnvironment withIdentities(Identity... identities) {
+        Collection<Identity> existingIdentities = getIdentities();
+        for (Identity identity : identities) {
+            Objects.requireNonNull(identity);
+            existingIdentities.add(identity);
+        }
+        return this;
+    }
+
+    /**
+     * Stores several identity to use. This method will add not clear any previously set identities, but only add new ones.
+     *
+     * @param identities The identities to use.
+     * @return This object.
+     * @throws NullPointerException If any of the given identity is {@code null}.
+     * @see #withIdentity(Identity)
+     * @see #withIdentities(Identity...)
+     * @since 1.2
+     */
+    public SFTPEnvironment withIdentities(Collection<Identity> identities) {
+        Collection<Identity> existingIdentities = getIdentities();
+        for (Identity identity : identities) {
+            Objects.requireNonNull(identity);
+            existingIdentities.add(identity);
+        }
+        return this;
+    }
+
+    private Collection<Identity> getIdentities() {
+        @SuppressWarnings("unchecked")
+        List<Identity> identities = FileSystemProviderSupport.getValue(this, IDENTITIES, List.class, null);
+        if (identities == null) {
+            identities = new ArrayList<>();
+            put(IDENTITIES, identities);
+        }
+        return identities;
+    }
+
+    /**
      * Stores the host key repository to use.
      *
      * @param repository The host key repository to use.
@@ -311,10 +383,12 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      *
      * @param knownHosts The known hosts file to use.
      * @return This object.
+     * @throws NullPointerException If the given file is {@code null}.
      * @see #withHostKeyRepository(HostKeyRepository)
      * @since 1.2
      */
     public SFTPEnvironment withKnownHosts(File knownHosts) {
+        Objects.requireNonNull(knownHosts);
         put(KNOWN_HOSTS, knownHosts);
         return this;
     }
@@ -418,6 +492,21 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
             IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
             jsch.setIdentityRepository(identityRepository);
         }
+        if (containsKey(IDENTITIES)) {
+            Collection<?> identities = FileSystemProviderSupport.getValue(this, IDENTITIES, Collection.class);
+            for (Object o : identities) {
+                if (o instanceof Identity) {
+                    Identity identity = (Identity) o;
+                    try {
+                        identity.addIdentity(jsch);
+                    } catch (JSchException e) {
+                        throw asFileSystemException(e);
+                    }
+                } else {
+                    throw Messages.fileSystemProvider().env().invalidProperty(IDENTITIES, identities);
+                }
+            }
+        }
 
         if (containsKey(HOST_KEY_REPOSITORY)) {
             HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
@@ -477,7 +566,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
 
         if (containsKey(PASSWORD)) {
             char[] password = FileSystemProviderSupport.getValue(this, PASSWORD, char[].class, null);
-            session.setPassword(new String(password));
+            session.setPassword(password == null ? null : new String(password));
         }
 
         if (containsKey(CONFIG)) {

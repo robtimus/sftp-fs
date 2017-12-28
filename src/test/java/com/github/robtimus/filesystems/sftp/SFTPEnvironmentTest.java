@@ -27,11 +27,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.HostKey;
 import com.jcraft.jsch.HostKeyRepository;
@@ -47,6 +51,8 @@ import com.jcraft.jsch.UserInfo;
 
 @SuppressWarnings({ "nls", "javadoc" })
 public class SFTPEnvironmentTest {
+
+    @Rule public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testWithConfig() {
@@ -70,6 +76,33 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
+    public void testWithIdentity() {
+        SFTPEnvironment env = new SFTPEnvironment();
+
+        assertEquals(Collections.emptyMap(), env);
+
+        Identity identity = Identity.fromFiles(IdentityTest.getPrivateKeyFile());
+
+        env.withIdentity(identity);
+
+        assertEquals(Collections.singletonMap("identities", Arrays.asList(identity)), env);
+    }
+
+    @Test
+    public void testWithIdentities() {
+        SFTPEnvironment env = new SFTPEnvironment();
+
+        assertEquals(Collections.emptyMap(), env);
+
+        Identity identity1 = Identity.fromFiles(IdentityTest.getPrivateKeyFile());
+        Identity identity2 = Identity.fromFiles(IdentityTest.getPrivateKeyFile(), IdentityTest.getPublicKeyFile(), IdentityTest.getPassphrase());
+
+        env.withIdentities(identity1, identity2);
+
+        assertEquals(Collections.singletonMap("identities", Arrays.asList(identity1, identity2)), env);
+    }
+
+    @Test
     public void testInitializeJSchEmpty() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
 
@@ -88,9 +121,49 @@ public class SFTPEnvironmentTest {
         env.initialize(jsch);
 
         verify(jsch).setIdentityRepository((IdentityRepository) env.get("identityRepository"));
+        verify(jsch).addIdentity(IdentityTest.getPrivateKeyFile().getAbsolutePath());
         verify(jsch).setHostKeyRepository((HostKeyRepository) env.get("hostKeyRepository"));
         verify(jsch).setKnownHosts(((File) env.get("knownHosts")).getAbsolutePath());
         verifyNoMoreInteractions(jsch);
+    }
+
+    @Test
+    public void testInitializeJSchWithNulls() throws IOException {
+        SFTPEnvironment env = new SFTPEnvironment();
+        initializeWithNulls(env);
+
+        JSch jsch = mock(JSch.class);
+        env.initialize(jsch);
+
+        verify(jsch).setIdentityRepository(null);
+        verify(jsch).setHostKeyRepository(null);
+        verifyNoMoreInteractions(jsch);
+    }
+
+    @Test
+    public void testInitializeJSchWithNullIdentity() throws IOException {
+        SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("identities", Collections.singleton(null));
+
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage());
+
+        JSch jsch = mock(JSch.class);
+        env.initialize(jsch);
+    }
+
+    @Test
+    public void testInitializeJSchWithInvalidIdentity() throws IOException {
+        SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("identities", Collections.singleton("foobar"));
+
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage());
+
+        JSch jsch = mock(JSch.class);
+        env.initialize(jsch);
     }
 
     @Test
@@ -121,6 +194,23 @@ public class SFTPEnvironmentTest {
         verify(session).setHostKeyAlias((String) env.get("hostKeyAlias"));
         verify(session).setServerAliveInterval((int) env.get("serverAliveInterval"));
         verify(session).setServerAliveCountMax((int) env.get("serverAliveCountMax"));
+        verifyNoMoreInteractions(session);
+    }
+
+    @Test
+    public void testInitializeSessionWithNulls() throws IOException {
+        SFTPEnvironment env = new SFTPEnvironment();
+        initializeWithNulls(env);
+
+        Session session = mock(Session.class);
+        env.initialize(session);
+
+        verify(session).setProxy(null);
+        verify(session).setUserInfo(null);
+        verify(session).setPassword((String) null);
+        verify(session).setSocketFactory(null);
+        verify(session).setClientVersion(null);
+        verify(session).setHostKeyAlias(null);
         verifyNoMoreInteractions(session);
     }
 
@@ -176,6 +266,19 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
+    public void testInitializeChannelPreConnectWithNulls() throws IOException, SftpException {
+        SFTPEnvironment env = new SFTPEnvironment();
+        initializeWithNulls(env);
+
+        ChannelSftp channel = mock(ChannelSftp.class);
+
+        env.initializePreConnect(channel);
+
+        verify(channel).setFilenameEncoding(null);
+        verifyNoMoreInteractions(channel);
+    }
+
+    @Test
     public void testConnectChannelEmpty() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
 
@@ -225,6 +328,18 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
+    public void testInitializeChannelPostConnectWithNulls() throws IOException {
+        SFTPEnvironment env = new SFTPEnvironment();
+        initializeWithNulls(env);
+
+        ChannelSftp channel = mock(ChannelSftp.class);
+
+        env.initializePostConnect(channel);
+
+        verifyNoMoreInteractions(channel);
+    }
+
+    @Test
     public void testSessionHostKeyRepository() throws JSchException, IOException, ReflectiveOperationException {
         testSessionPropertyInheritedFromJSch("getHostKeyRepository", "hostKeyRepository");
     }
@@ -239,6 +354,8 @@ public class SFTPEnvironmentTest {
 
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
+        // by adding an identity, the identity repository gets overwritten by a wrapper
+        env.remove("identities");
 
         JSch jsch = new JSch();
         env.initialize(jsch);
@@ -266,13 +383,29 @@ public class SFTPEnvironmentTest {
         env.withServerAliveInterval(500);
         env.withServerAliveCountMax(5);
         env.withIdentityRepository(new TestIdentityRepository());
+        env.withIdentity(Identity.fromFiles(IdentityTest.getPrivateKeyFile()));
         env.withHostKeyRepository(new TestHostKeyRepository());
-        env.withKnownHosts(new File("."));
+        env.withKnownHosts(new File("known_hosts"));
         env.withAgentForwarding(false);
         env.withFilenameEncoding("UTF-8");
         env.withDefaultDirectory("/");
         env.withClientConnectionCount(5);
         env.withFileSystemExceptionFactory(DefaultFileSystemExceptionFactory.INSTANCE);
+    }
+
+    private void initializeWithNulls(SFTPEnvironment env) {
+        env.withUsername(null);
+        env.withProxy(null);
+        env.withUserInfo(null);
+        env.withPassword(null);
+        env.withSocketFactory(null);
+        env.withClientVersion(null);
+        env.withHostKeyAlias(null);
+        env.withIdentityRepository(null);
+        env.withHostKeyRepository(null);
+        env.withFilenameEncoding(null);
+        env.withDefaultDirectory(null);
+        env.withFileSystemExceptionFactory(null);
     }
 
     static final class TestSocketFactory implements SocketFactory {
