@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
@@ -73,6 +74,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String SERVER_ALIVE_COUNTMAX = "serverAliveCountMax"; //$NON-NLS-1$
     private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
     private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
+    private static final String IDENTITY = "identity"; //$NON-NLS-1$
     // don't support port forwarding, X11
 
     // ChannelSession
@@ -302,6 +304,17 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
+     * Stores the identity to be used for public-key authentication.
+     *
+     * @param identityFile The file containing the private key.
+     * @return This object.
+     */
+    public SFTPEnvironment withIdentity(File identityFile) {
+        put(IDENTITY, identityFile);
+        return this;
+    }
+
+    /**
      * Stores whether or not agent forwarding should be enabled.
      *
      * @param agentForwarding {@code true} to enable strict agent forwarding, or {@code false} to disable it.
@@ -390,6 +403,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     ChannelSftp openChannel(JSch jsch, String hostname, int port) throws IOException {
+        initializeJsch(jsch);
         Session session = getSession(jsch, hostname, port);
         try {
             initialize(session);
@@ -407,6 +421,17 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         } catch (IOException e) {
             session.disconnect();
             throw e;
+        }
+    }
+
+    void initializeJsch(JSch jsch) throws IOException {
+        if (containsKey(IDENTITY)) {
+            File identity = FileSystemProviderSupport.getValue(this, IDENTITY, File.class, null);
+            try {
+                jsch.addIdentity(identity.getPath());
+            } catch (JSchException e) {
+                throw asFileSystemException(e);
+            }
         }
     }
 
