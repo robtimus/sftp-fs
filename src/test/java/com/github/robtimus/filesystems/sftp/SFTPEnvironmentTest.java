@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -69,7 +70,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJschEmpty() {
+    public void testInitializeJSchEmpty() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         JSch jsch = mock(JSch.class);
@@ -79,7 +80,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJschFull() {
+    public void testInitializeJSchFull() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -88,6 +89,7 @@ public class SFTPEnvironmentTest {
 
         verify(jsch).setIdentityRepository((IdentityRepository) env.get("identityRepository"));
         verify(jsch).setHostKeyRepository((HostKeyRepository) env.get("hostKeyRepository"));
+        verify(jsch).setKnownHosts(((File) env.get("knownHosts")).getAbsolutePath());
         verifyNoMoreInteractions(jsch);
     }
 
@@ -265,6 +267,7 @@ public class SFTPEnvironmentTest {
         env.withServerAliveCountMax(5);
         env.withIdentityRepository(new TestIdentityRepository());
         env.withHostKeyRepository(new TestHostKeyRepository());
+        env.withKnownHosts(new File("."));
         env.withAgentForwarding(false);
         env.withFilenameEncoding("UTF-8");
         env.withDefaultDirectory("/");

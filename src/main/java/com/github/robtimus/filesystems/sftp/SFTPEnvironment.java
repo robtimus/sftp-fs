@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
@@ -58,6 +59,11 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
 
     private static final String CONNECT_TIMEOUT = "connectTimeout"; //$NON-NLS-1$
 
+    // JSch
+    private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
+    private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
+    private static final String KNOWN_HOSTS = "knownHosts"; //$NON-NLS-1$
+
     // Session
 
     private static final String PROXY = "proxy"; //$NON-NLS-1$
@@ -71,8 +77,6 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String HOST_KEY_ALIAS = "hostKeyAlias"; //$NON-NLS-1$
     private static final String SERVER_ALIVE_INTERVAL = "serverAliveInterval"; //$NON-NLS-1$
     private static final String SERVER_ALIVE_COUNT_MAX = "serverAliveCountMax"; //$NON-NLS-1$
-    private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
-    private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
     // don't support port forwarding, X11
 
     // ChannelSession
@@ -302,6 +306,20 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
+     * Stores the known hosts file to use.
+     * Note that the known hosts file is ignored if a {@link HostKeyRepository} is set with a non-{@code null} value.
+     *
+     * @param knownHosts The known hosts file to use.
+     * @return This object.
+     * @see #withHostKeyRepository(HostKeyRepository)
+     * @since 1.2
+     */
+    public SFTPEnvironment withKnownHosts(File knownHosts) {
+        put(KNOWN_HOSTS, knownHosts);
+        return this;
+    }
+
+    /**
      * Stores whether or not agent forwarding should be enabled.
      *
      * @param agentForwarding {@code true} to enable strict agent forwarding, or {@code false} to disable it.
@@ -389,13 +407,13 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 DefaultFileSystemExceptionFactory.INSTANCE);
     }
 
-    JSch createJSch() {
+    JSch createJSch() throws IOException {
         JSch jsch = new JSch();
         initialize(jsch);
         return jsch;
     }
 
-    void initialize(JSch jsch) {
+    void initialize(JSch jsch) throws IOException {
         if (containsKey(IDENTITY_REPOSITORY)) {
             IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
             jsch.setIdentityRepository(identityRepository);
@@ -404,6 +422,14 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         if (containsKey(HOST_KEY_REPOSITORY)) {
             HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
             jsch.setHostKeyRepository(hostKeyRepository);
+        }
+        if (containsKey(KNOWN_HOSTS)) {
+            File knownHosts = FileSystemProviderSupport.getValue(this, KNOWN_HOSTS, File.class);
+            try {
+                jsch.setKnownHosts(knownHosts.getAbsolutePath());
+            } catch (JSchException e) {
+                throw asFileSystemException(e);
+            }
         }
     }
 
