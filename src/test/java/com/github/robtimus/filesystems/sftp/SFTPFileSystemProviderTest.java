@@ -32,6 +32,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.ProviderMismatchException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFileAttributeView;
@@ -198,5 +199,23 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             BasicFileAttributes attributes = view.readAttributes();
             assertTrue(attributes.isDirectory());
         }
+    }
+
+    @Test
+    public void testKeepAliveWithFTPFileSystem() throws IOException {
+        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+        try (SFTPFileSystem fs = (SFTPFileSystem) provider.newFileSystem(getURI(), createEnv())) {
+            SFTPFileSystemProvider.keepAlive(fs);
+        }
+    }
+
+    @Test(expected = ProviderMismatchException.class)
+    public void testKeepAliveWithNonFTPFileSystem() throws IOException {
+        SFTPFileSystemProvider.keepAlive(FileSystems.getDefault());
+    }
+
+    @Test(expected = ProviderMismatchException.class)
+    public void testKeepAliveWithNullFTPFileSystem() throws IOException {
+        SFTPFileSystemProvider.keepAlive(null);
     }
 }

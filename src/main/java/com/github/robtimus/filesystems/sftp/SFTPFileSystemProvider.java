@@ -450,6 +450,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     public static void keepAlive(FileSystem fs) throws IOException {
         if (fs instanceof SFTPFileSystem) {
             ((SFTPFileSystem) fs).keepAlive();
+            return;
         }
         throw new ProviderMismatchException();
     }
