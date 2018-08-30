@@ -432,10 +432,10 @@
               <report>summary</report>
               <report>dependency-info</report>
               <report>dependencies</report>
-              <report>license</report>
-              <report>project-team</report>
+              <report>licenses</report>
+              <report>team</report>
               <report>scm</report>
-              <report>issue-tracking</report>
+              <report>issue-management</report>
             </reports>
           </reportSet>
         </reportSets>
