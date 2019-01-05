@@ -1,6 +1,7 @@
 <head>
   <title>Download</title>
 </head>
+
 ## Download from Git
 
 See [Source Code Management](source-repository.html) for more information.
