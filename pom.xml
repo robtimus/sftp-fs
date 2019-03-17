@@ -73,30 +73,30 @@
 
     <version.fs-core>1.2</version.fs-core>
     <version.hamcrest>1.3</version.hamcrest>
-    <version.jsch>0.1.54</version.jsch>
+    <version.jsch>0.1.55</version.jsch>
     <version.junit>4.12</version.junit>
     <version.mockito>1.10.19</version.mockito>
-    <version.slf4j>1.7.25</version.slf4j>
+    <version.slf4j>1.7.26</version.slf4j>
     <!-- version 1.4.0 and 1.6.0 lead to an Eclipse error in class FixedSftpSubSystem: "The hierarchy of the type Factory is inconsistent" -->
     <version.sshd-core>1.3.0</version.sshd-core>
 
     <version.plugin.antrun>1.8</version.plugin.antrun>
-    <version.plugin.assembly>3.1.0</version.plugin.assembly>
+    <version.plugin.assembly>3.1.1</version.plugin.assembly>
     <version.plugin.clean>3.1.0</version.plugin.clean>
-    <version.plugin.compiler>3.7.0</version.plugin.compiler>
+    <version.plugin.compiler>3.8.0</version.plugin.compiler>
     <version.plugin.dependency>3.1.1</version.plugin.dependency>
     <version.plugin.deploy>2.8.2</version.plugin.deploy>
     <version.plugin.gpg>1.6</version.plugin.gpg>
     <version.plugin.nexus-staging>1.6.8</version.plugin.nexus-staging>
     <version.plugin.info-reports>3.0.0</version.plugin.info-reports>
     <version.plugin.install>2.5.2</version.plugin.install>
-    <version.plugin.jar>3.1.0</version.plugin.jar>
-    <version.plugin.javadoc>3.0.1</version.plugin.javadoc>
+    <version.plugin.jar>3.1.1</version.plugin.jar>
+    <version.plugin.javadoc>3.1.0</version.plugin.javadoc>
     <version.plugin.release>2.5.3</version.plugin.release>
     <version.plugin.resources>3.1.0</version.plugin.resources>
     <version.plugin.site>3.7.1</version.plugin.site>
     <version.plugin.source>3.0.1</version.plugin.source>
-    <version.plugin.surefire>2.22.0</version.plugin.surefire>
+    <version.plugin.surefire>2.22.1</version.plugin.surefire>
   </properties>
 
   <dependencies>
