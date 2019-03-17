@@ -42,15 +42,26 @@ public class SFTPEnvironmentSetterTest {
     private final Object propertyValue;
 
     public SFTPEnvironmentSetterTest(String methodName, String propertyName, Object propertyValue) {
-        this.setter = findMethod(methodName);
+        this.setter = findMethod(methodName, propertyValue.getClass());
         this.propertyName = propertyName;
         this.propertyValue = propertyValue;
     }
 
-    private Method findMethod(String methodName) {
+    private Method findMethod(String methodName, Class<?> propertyType) {
         for (Method method : SFTPEnvironment.class.getMethods()) {
-            if (method.getName().equals(methodName) && method.getParameterTypes().length == 1) {
-                return method;
+            if (method.getName().equals(methodName)) {
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                if (parameterTypes.length == 1) {
+                    if (parameterTypes[0].isAssignableFrom(propertyType)) {
+                        return method;
+                    }
+                    if (parameterTypes[0] == boolean.class && propertyType == Boolean.class) {
+                        return method;
+                    }
+                    if (parameterTypes[0] == int.class && propertyType == Integer.class) {
+                        return method;
+                    }
+                }
             }
         }
         throw new AssertionError("Could not find method " + methodName);
