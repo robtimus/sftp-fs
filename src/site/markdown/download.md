@@ -4,7 +4,7 @@
 
 ## Download from Git
 
-See [Source Code Management](source-repository.html) for more information.
+See [Source Code Management](scm.html) for more information.
 
 ## Download binaries / sources
 
