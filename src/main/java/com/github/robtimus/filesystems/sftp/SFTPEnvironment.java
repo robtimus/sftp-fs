@@ -450,6 +450,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      *
      * @param timeout The timeout in milliseconds.
      * @return This object.
+     * @see #withClientConnectionWaitTimeout(long, TimeUnit)
      * @since 1.3
      */
     public SFTPEnvironment withClientConnectionWaitTimeout(long timeout) {
@@ -466,6 +467,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      * @param unit The timeout unit.
      * @return This object.
      * @throws NullPointerException If the timeout unit is {@code null}.
+     * @see #withClientConnectionWaitTimeout(long)
      * @since 1.3
      */
     public SFTPEnvironment withClientConnectionWaitTimeout(long duration, TimeUnit unit) {
