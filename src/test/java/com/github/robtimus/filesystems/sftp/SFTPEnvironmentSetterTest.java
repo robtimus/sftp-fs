@@ -61,6 +61,9 @@ public class SFTPEnvironmentSetterTest {
                     if (parameterTypes[0] == int.class && propertyType == Integer.class) {
                         return method;
                     }
+                    if (parameterTypes[0] == long.class && propertyType == Long.class) {
+                        return method;
+                    }
                 }
             }
         }
@@ -90,6 +93,7 @@ public class SFTPEnvironmentSetterTest {
                 { "withFilenameEncoding", "filenameEncoding", "UTF-8", },
                 { "withDefaultDirectory", "defaultDir", "/", },
                 { "withClientConnectionCount", "clientConnectionCount", 5, },
+                { "withClientConnectionWaitTimeout", "clientConnectionWaitTimeout", 1000L, },
                 { "withFileSystemExceptionFactory", "fileSystemExceptionFactory", DefaultFileSystemExceptionFactory.INSTANCE, },
                 { "withActualTotalSpaceCalculation", "calculateActualTotalSpace", false, },
         };

@@ -41,4 +41,8 @@ final class SFTPMessages {
     public static String copyOfSymbolicLinksAcrossFileSystemsNotSupported() {
         return getMessage("copyOfSymbolicLinksAcrossFileSystemsNotSupported"); //$NON-NLS-1$
     }
+
+    public static String clientConnectionWaitTimeoutExpired() {
+        return getMessage("clientConnectionWaitTimeoutExpired"); //$NON-NLS-1$
+    }
 }

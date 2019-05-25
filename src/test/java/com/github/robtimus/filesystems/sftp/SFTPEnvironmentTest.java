@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -367,6 +368,17 @@ public class SFTPEnvironmentTest {
         method.setAccessible(true);
 
         assertEquals(env.get(propertyName), method.invoke(session));
+    }
+
+    @Test
+    public void testWithClientConnectionWaitTimeoutWithUnit() {
+        SFTPEnvironment env = new SFTPEnvironment();
+
+        assertEquals(Collections.emptyMap(), env);
+
+        env.withClientConnectionWaitTimeout(1, TimeUnit.MINUTES);
+
+        assertEquals(Collections.singletonMap("clientConnectionWaitTimeout", 60_000L), env);
     }
 
     private void initializeFully(SFTPEnvironment env) {

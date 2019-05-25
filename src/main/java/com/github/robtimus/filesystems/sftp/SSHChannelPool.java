@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.ChannelSftp.LsEntrySelector;
@@ -54,6 +55,7 @@ final class SSHChannelPool {
     private final FileSystemExceptionFactory exceptionFactory;
 
     private final BlockingQueue<Channel> pool;
+    private final long poolWaitTimeout;
 
     SSHChannelPool(String hostname, int port, SFTPEnvironment env) throws IOException {
         jsch = env.createJSch();
@@ -64,6 +66,7 @@ final class SSHChannelPool {
         this.exceptionFactory = env.getExceptionFactory();
         final int poolSize = env.getClientConnectionCount();
         this.pool = new ArrayBlockingQueue<>(poolSize);
+        this.poolWaitTimeout = env.getClientConnectionWaitTimeout();
 
         try {
             for (int i = 0; i < poolSize; i++) {
@@ -84,7 +87,7 @@ final class SSHChannelPool {
 
     Channel get() throws IOException {
         try {
-            Channel channel = pool.take();
+            Channel channel = getWithinTimeout();
             try {
                 if (!channel.isConnected()) {
                     channel = new Channel(true);
@@ -104,6 +107,17 @@ final class SSHChannelPool {
             iioe.initCause(e);
             throw iioe;
         }
+    }
+
+    private Channel getWithinTimeout() throws InterruptedException, IOException {
+        if (poolWaitTimeout == 0) {
+            return pool.take();
+        }
+        Channel channel = pool.poll(poolWaitTimeout, TimeUnit.MILLISECONDS);
+        if (channel == null) {
+            throw new IOException(SFTPMessages.clientConnectionWaitTimeoutExpired());
+        }
+        return channel;
     }
 
     Channel getOrCreate() throws IOException {

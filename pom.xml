@@ -40,8 +40,16 @@
     <developer>
       <name>Rob Spoor</name>
       <email>robtimus@users.noreply.github.com</email>
+      <url>https://github.com/robtimus/</url>
     </developer>
   </developers>
+
+  <contributors>
+    <contributor>
+      <name>Pei-Tang Huang</name>
+      <url>https://github.com/tan9/</url>
+    </contributor>
+  </contributors>
 
   <scm>
     <connection>scm:git:git@github.com:robtimus/sftp-fs.git</connection>

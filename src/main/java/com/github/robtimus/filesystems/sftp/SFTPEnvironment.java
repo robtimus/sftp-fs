@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
@@ -96,7 +97,9 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
 
     private static final String DEFAULT_DIR = "defaultDir"; //$NON-NLS-1$
     private static final int DEFAULT_CLIENT_CONNECTION_COUNT = 5;
+    private static final long DEFAULT_CLIENT_CONNECTION_WAIT_TIMEOUT = 0;
     private static final String CLIENT_CONNECTION_COUNT = "clientConnectionCount"; //$NON-NLS-1$
+    private static final String CLIENT_CONNECTION_WAIT_TIMEOUT = "clientConnectionWaitTimeout"; //$NON-NLS-1$
     private static final String FILE_SYSTEM_EXCEPTION_FACTORY = "fileSystemExceptionFactory"; //$NON-NLS-1$
     private static final String CALCULATE_ACTUAL_TOTAL_SPACE = "calculateActualTotalSpace"; //$NON-NLS-1$
 
@@ -441,6 +444,35 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
+     * Stores the wait timeout to use for retrieving client connection from the connection pool.
+     * <p>
+     * If the timeout is not larger than {@code 0}, the SFTP file system waits indefinitely until a client connection becomes available.
+     *
+     * @param timeout The timeout in milliseconds.
+     * @return This object.
+     * @since 1.3
+     */
+    public SFTPEnvironment withClientConnectionWaitTimeout(long timeout) {
+        put(CLIENT_CONNECTION_WAIT_TIMEOUT, timeout);
+        return this;
+    }
+
+    /**
+     * Stores the wait timeout to use for retrieving client connections from the connection pool.
+     * <p>
+     * If the timeout is not larger than {@code 0}, the SFTP file system waits indefinitely until a client connection becomes available.
+     *
+     * @param duration The timeout duration.
+     * @param unit The timeout unit.
+     * @return This object.
+     * @throws NullPointerException If the timeout unit is {@code null}.
+     * @since 1.3
+     */
+    public SFTPEnvironment withClientConnectionWaitTimeout(long duration, TimeUnit unit) {
+        return withClientConnectionWaitTimeout(TimeUnit.MILLISECONDS.convert(duration, unit));
+    }
+
+    /**
      * Stores the file system exception factory to use.
      *
      * @param factory The file system exception factory to use.
@@ -474,6 +506,11 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     int getClientConnectionCount() {
         int count = FileSystemProviderSupport.getIntValue(this, CLIENT_CONNECTION_COUNT, DEFAULT_CLIENT_CONNECTION_COUNT);
         return Math.max(1, count);
+    }
+
+    long getClientConnectionWaitTimeout() {
+        long timeout = FileSystemProviderSupport.getLongValue(this, CLIENT_CONNECTION_WAIT_TIMEOUT, DEFAULT_CLIENT_CONNECTION_WAIT_TIMEOUT);
+        return Math.max(0, timeout);
     }
 
     FileSystemExceptionFactory getExceptionFactory() {
