@@ -338,7 +338,12 @@ class SFTPFileSystem extends FileSystem {
             }
 
             if (!isDirectory) {
-                throw new NotDirectoryException(path.path());
+                // https://github.com/robtimus/sftp-fs/issues/4: don't fail immediately but check the attributes
+                // Follow links to ensure the directory attribute can be read correctly
+                SftpATTRS attributes = channel.readAttributes(path.path(), true);
+                if (!attributes.isDir()) {
+                    throw new NotDirectoryException(path.path());
+                }
             }
             return new SFTPPathDirectoryStream(path, entries, filter);
         }

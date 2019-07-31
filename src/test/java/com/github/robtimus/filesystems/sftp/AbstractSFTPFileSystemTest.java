@@ -49,6 +49,7 @@ import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -72,6 +73,10 @@ public abstract class AbstractSFTPFileSystemTest {
 
     @BeforeClass
     public static void setupClass() throws NoSuchAlgorithmException, IOException {
+        setupClass(new FixedSftpSubsystem.Factory());
+    }
+
+    protected static void setupClass(SftpSubsystemFactory subSystemFactory) throws NoSuchAlgorithmException, IOException {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         KeyPair keyPair = generator.generateKeyPair();
 
@@ -86,7 +91,7 @@ public abstract class AbstractSFTPFileSystemTest {
                 return USERNAME.equals(username) && PASSWORD.equals(password);
             }
         });
-        sshServer.setSubsystemFactories(Arrays.<NamedFactory<Command>>asList(new FixedSftpSubsystem.Factory()));
+        sshServer.setSubsystemFactories(Arrays.<NamedFactory<Command>>asList(subSystemFactory));
 
         rootPath = Files.createTempDirectory("sftp-fs");
         defaultDir = rootPath.resolve("home");

@@ -25,6 +25,9 @@ import java.util.concurrent.ExecutorService;
 import org.apache.sshd.common.util.GenericUtils;
 import org.apache.sshd.common.util.io.IoUtils;
 import org.apache.sshd.server.Command;
+import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.server.subsystem.sftp.DirectoryHandle;
+import org.apache.sshd.server.subsystem.sftp.Handle;
 import org.apache.sshd.server.subsystem.sftp.SftpEventListener;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystem;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
@@ -59,6 +62,32 @@ public class FixedSftpSubsystem extends SftpSubsystem {
                     subsystem.addSftpEventListener(l);
                 }
             }
+
+            return subsystem;
+        }
+    }
+
+    public static final class FactoryWithoutSystemDirs extends SftpSubsystemFactory {
+
+        @Override
+        public Command create() {
+            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy());
+            Collection<? extends SftpEventListener> listeners = getRegisteredListeners();
+            if (GenericUtils.size(listeners) > 0) {
+                for (SftpEventListener l : listeners) {
+                    subsystem.addSftpEventListener(l);
+                }
+            }
+            subsystem.addSftpEventListener(new SftpEventListener() {
+                @Override
+                public void open(ServerSession session, String remoteHandle, Handle localHandle) throws IOException {
+                    if (localHandle instanceof DirectoryHandle) {
+                        DirectoryHandle directoryHandle = (DirectoryHandle) localHandle;
+                        directoryHandle.markDotSent();
+                        directoryHandle.markDotDotSent();
+                    }
+                }
+            });
 
             return subsystem;
         }
