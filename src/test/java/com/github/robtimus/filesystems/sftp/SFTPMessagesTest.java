@@ -103,7 +103,7 @@ public class SFTPMessagesTest {
     @Parameters(name = "{0}")
     public static Iterable<Object[]> getParameters() {
         List<Object[]> parameters = new ArrayList<>();
-        collectParameters(parameters, SFTPMessages.class, null, "Messages");
+        collectParameters(parameters, SFTPMessages.class, null, "SFTPMessages");
         return parameters;
     }
 

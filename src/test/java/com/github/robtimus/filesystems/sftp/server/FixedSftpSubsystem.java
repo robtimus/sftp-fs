@@ -26,6 +26,7 @@ import org.apache.sshd.common.util.GenericUtils;
 import org.apache.sshd.common.util.io.IoUtils;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.server.subsystem.sftp.AbstractSftpEventListenerAdapter;
 import org.apache.sshd.server.subsystem.sftp.DirectoryHandle;
 import org.apache.sshd.server.subsystem.sftp.Handle;
 import org.apache.sshd.server.subsystem.sftp.SftpEventListener;
@@ -78,9 +79,9 @@ public class FixedSftpSubsystem extends SftpSubsystem {
                     subsystem.addSftpEventListener(l);
                 }
             }
-            subsystem.addSftpEventListener(new SftpEventListener() {
+            subsystem.addSftpEventListener(new AbstractSftpEventListenerAdapter() {
                 @Override
-                public void open(ServerSession session, String remoteHandle, Handle localHandle) throws IOException {
+                public void open(ServerSession session, String remoteHandle, Handle localHandle) {
                     if (localHandle instanceof DirectoryHandle) {
                         DirectoryHandle directoryHandle = (DirectoryHandle) localHandle;
                         directoryHandle.markDotSent();

@@ -17,6 +17,24 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.channelNotConnected;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.closedInputStream;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.closedOutputStream;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.createLogger;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.createdChannel;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.createdInputStream;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.createdOutputStream;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.createdPool;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.creatingPool;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.decreasedRefCount;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.disconnectedChannel;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.drainedPoolForClose;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.drainedPoolForKeepAlive;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.failedToCreatePool;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.increasedRefCount;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.returnedBrokenChannel;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.returnedChannel;
+import static com.github.robtimus.filesystems.sftp.SFTPLogger.tookChannel;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +48,8 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import org.slf4j.Logger;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.ChannelSftp.LsEntrySelector;
@@ -45,6 +65,10 @@ import com.jcraft.jsch.SftpStatVFS;
  * @author Rob Spoor
  */
 final class SSHChannelPool {
+
+    private static final Logger LOGGER = createLogger(SSHChannelPool.class);
+
+    private static final AtomicLong CHANNEL_COUNTER = new AtomicLong();
 
     private final JSch jsch;
 
@@ -68,12 +92,15 @@ final class SSHChannelPool {
         this.pool = new ArrayBlockingQueue<>(poolSize);
         this.poolWaitTimeout = env.getClientConnectionWaitTimeout();
 
+        creatingPool(LOGGER, hostname, port, poolSize, poolWaitTimeout);
         try {
             for (int i = 0; i < poolSize; i++) {
                 pool.add(new Channel(true));
             }
+            createdPool(LOGGER, hostname, port, poolSize);
         } catch (IOException e) {
             // creating the pool failed, disconnect all channels
+            failedToCreatePool(LOGGER, e);
             for (Channel channel : pool) {
                 try {
                     channel.disconnect();
@@ -89,12 +116,15 @@ final class SSHChannelPool {
         try {
             Channel channel = getWithinTimeout();
             try {
+                tookChannel(LOGGER, channel.channelId, pool.size());
                 if (!channel.isConnected()) {
+                    channelNotConnected(LOGGER, channel.channelId);
                     channel = new Channel(true);
                 }
             } catch (final Exception e) {
                 // could not create a new channel; re-add the broken channel to the pool to prevent pool starvation
                 pool.add(channel);
+                returnedBrokenChannel(LOGGER, channel.channelId, pool.size());
                 throw e;
             }
             channel.increaseRefCount();
@@ -127,12 +157,15 @@ final class SSHChannelPool {
             return new Channel(false);
         }
         try {
+            tookChannel(LOGGER, channel.channelId, pool.size());
             if (!channel.isConnected()) {
+                channelNotConnected(LOGGER, channel.channelId);
                 channel = new Channel(true);
             }
         } catch (final Exception e) {
             // could not create a new channel; re-add the broken channel to the pool to prevent pool starvation
             pool.add(channel);
+            returnedBrokenChannel(LOGGER, channel.channelId, pool.size());
             throw e;
         }
         channel.increaseRefCount();
@@ -142,6 +175,7 @@ final class SSHChannelPool {
     void keepAlive() throws IOException {
         List<Channel> channels = new ArrayList<>();
         pool.drainTo(channels);
+        drainedPoolForKeepAlive(LOGGER);
 
         IOException exception = null;
         for (Channel channel : channels) {
@@ -161,6 +195,7 @@ final class SSHChannelPool {
     void close() throws IOException {
         List<Channel> channels = new ArrayList<>();
         pool.drainTo(channels);
+        drainedPoolForClose(LOGGER);
 
         IOException exception = null;
         for (Channel channel : channels) {
@@ -187,9 +222,12 @@ final class SSHChannelPool {
         assert channel.refCount == 0;
 
         pool.add(channel);
+        returnedChannel(LOGGER, channel.channelId, pool.size());
     }
 
     final class Channel implements Closeable {
+
+        private final String channelId;
 
         private final ChannelSftp channel;
         private final boolean pooled;
@@ -197,17 +235,23 @@ final class SSHChannelPool {
         private int refCount = 0;
 
         private Channel(boolean pooled) throws IOException {
+            this.channelId = "channel-" + CHANNEL_COUNTER.incrementAndGet(); //$NON-NLS-1$
+
             this.channel = env.openChannel(jsch, hostname, port);
             this.pooled = pooled;
+
+            createdChannel(LOGGER, channelId, pooled);
         }
 
         private void increaseRefCount() {
             refCount++;
+            increasedRefCount(LOGGER, channelId, refCount);
         }
 
         private int decreaseRefCount() {
             if (refCount > 0) {
                 refCount--;
+                decreasedRefCount(LOGGER, channelId, refCount);
             }
             return refCount;
         }
@@ -241,6 +285,7 @@ final class SSHChannelPool {
             } catch (JSchException e) {
                 throw asIOException(e);
             }
+            disconnectedChannel(LOGGER, channelId);
         }
 
         private void disconnectQuietly() {
@@ -250,6 +295,7 @@ final class SSHChannelPool {
             } catch (@SuppressWarnings("unused") JSchException e) {
                 // ignore
             }
+            disconnectedChannel(LOGGER, channelId);
         }
 
         @Override
@@ -277,7 +323,7 @@ final class SSHChannelPool {
 
             try {
                 InputStream in = channel.get(path);
-                refCount++;
+                increaseRefCount();
                 return new SFTPInputStream(path, in, options.deleteOnClose);
             } catch (SftpException e) {
                 throw exceptionFactory.createNewInputStreamException(path, e);
@@ -296,6 +342,7 @@ final class SSHChannelPool {
                 this.path = path;
                 this.in = in;
                 this.deleteOnClose = deleteOnClose;
+                createdInputStream(LOGGER, channelId, path);
             }
 
             @Override
@@ -332,6 +379,7 @@ final class SSHChannelPool {
                     if (deleteOnClose) {
                         delete(path, false);
                     }
+                    closedInputStream(LOGGER, channelId, path);
                 }
             }
 
@@ -358,7 +406,7 @@ final class SSHChannelPool {
             int mode = options.append ? ChannelSftp.APPEND : ChannelSftp.OVERWRITE;
             try {
                 OutputStream out = channel.put(path, mode);
-                refCount++;
+                increaseRefCount();
                 return new SFTPOutputStream(path, out, options.deleteOnClose);
             } catch (SftpException e) {
                 throw exceptionFactory.createNewOutputStreamException(path, e, options.options);
@@ -377,6 +425,7 @@ final class SSHChannelPool {
                 this.path = path;
                 this.out = out;
                 this.deleteOnClose = deleteOnClose;
+                createdOutputStream(LOGGER, channelId, path);
             }
 
             @Override
@@ -408,6 +457,7 @@ final class SSHChannelPool {
                     if (deleteOnClose) {
                         delete(path, false);
                     }
+                    closedOutputStream(LOGGER, channelId, path);
                 }
             }
         }
@@ -415,13 +465,7 @@ final class SSHChannelPool {
         private void finalizeStream() throws IOException {
             assert refCount > 0;
 
-            if (decreaseRefCount() == 0) {
-                if (pooled) {
-                    returnToPool(Channel.this);
-                } else {
-                    disconnect();
-                }
-            }
+            close();
         }
 
         void storeFile(String path, InputStream local, Collection<? extends OpenOption> openOptions) throws IOException {
