@@ -21,7 +21,7 @@
 
   <groupId>com.github.robtimus</groupId>
   <artifactId>sftp-fs</artifactId>
-  <version>1.3.2</version>
+  <version>1.4-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>sftp-fs</name>
@@ -54,7 +54,7 @@
   <scm>
     <connection>scm:git:git@github.com:robtimus/sftp-fs.git</connection>
     <developerConnection>scm:git:git@github.com:robtimus/sftp-fs.git</developerConnection>
-    <tag>sftp-fs-1.3.2</tag>
+    <tag>HEAD</tag>
     <url>https://github.com/robtimus/sftp-fs</url>
   </scm>
 
