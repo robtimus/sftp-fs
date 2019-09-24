@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.OpenOption;
 import java.util.ArrayList;
@@ -513,7 +514,20 @@ final class SSHChannelPool {
             try {
                 channel.mkdir(path);
             } catch (SftpException e) {
+                if (fileExists(path)) {
+                    throw new FileAlreadyExistsException(path);
+                }
                 throw exceptionFactory.createCreateDirectoryException(path, e);
+            }
+        }
+
+        private boolean fileExists(String path) {
+            try {
+                channel.stat(path);
+                return true;
+            } catch (@SuppressWarnings("unused") SftpException e) {
+                // the file actually may exist, but throw the original exception instead
+                return false;
             }
         }
 

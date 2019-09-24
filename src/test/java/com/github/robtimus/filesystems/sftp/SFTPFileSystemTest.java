@@ -243,7 +243,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertEquals(0, getChildCount("/foo"));
     }
 
-    @Test(expected = FileSystemException.class)
+    @Test(expected = NoSuchFileException.class)
     public void testNewInputStreamSFTPFailure() throws IOException {
 
         // failure: file not found
@@ -491,7 +491,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertTrue(Files.isRegularFile(getPath("/foo/bar")));
     }
 
-    @Test(expected = FileSystemException.class)
+    @Test(expected = NoSuchFileException.class)
     public void testNewByteChannelReadNonExisting() throws IOException {
 
         // failure: file does not exist
@@ -574,7 +574,20 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertTrue(Files.isDirectory(getPath("/foo")));
     }
 
-    @Test(expected = FileSystemException.class)
+    @Test(expected = FileAlreadyExistsException.class)
+    public void testCreateDirectoryAlreadyExists() throws IOException {
+        addDirectory("/foo/bar");
+
+        try {
+            getFileSystem().createDirectory(createPath("/foo/bar"));
+        } finally {
+            verify(getExceptionFactory(), never()).createCreateDirectoryException(anyString(), any(SftpException.class));
+            assertTrue(Files.exists(getPath("/foo")));
+            assertTrue(Files.exists(getPath("/foo/bar")));
+        }
+    }
+
+    @Test(expected = NoSuchFileException.class)
     public void testCreateDirectorySFTPFailure() throws IOException {
         // failure: parent does not exist
 
@@ -673,7 +686,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertEquals(createPath("/foo"), link);
     }
 
-    @Test(expected = FileSystemException.class)
+    @Test(expected = NoSuchFileException.class)
     public void testReadSymbolicLinkNotExisting() throws IOException {
 
         try {

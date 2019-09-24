@@ -201,6 +201,8 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         }
     }
 
+    // SFTPFileSystemProvider.keepAlive
+
     @Test
     public void testKeepAliveWithFTPFileSystem() throws IOException {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
@@ -217,5 +219,20 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     @Test(expected = ProviderMismatchException.class)
     public void testKeepAliveWithNullFTPFileSystem() throws IOException {
         SFTPFileSystemProvider.keepAlive(null);
+    }
+
+    // SFTPFileSystemProvider.createDirectory through Files.createDirectories
+
+    @Test
+    public void testCreateDirectories() throws IOException {
+        addDirectory("/foo/bar");
+
+        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+        try (SFTPFileSystem fs = (SFTPFileSystem) provider.newFileSystem(getURI(), createEnv())) {
+            SFTPPath path = new SFTPPath(fs, "/foo/bar");
+            Files.createDirectories(path);
+        }
+
+        assertTrue(Files.exists(getPath("/foo/bar")));
     }
 }
