@@ -18,6 +18,7 @@
 package com.github.robtimus.filesystems.sftp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -33,9 +34,8 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.function.ThrowingRunnable;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.HostKey;
@@ -52,8 +52,6 @@ import com.jcraft.jsch.UserInfo;
 
 @SuppressWarnings({ "nls", "javadoc" })
 public class SFTPEnvironmentTest {
-
-    @Rule public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testWithConfig() {
@@ -142,29 +140,35 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJSchWithNullIdentity() throws IOException {
-        SFTPEnvironment env = new SFTPEnvironment();
+    public void testInitializeJSchWithNullIdentity() {
+        final SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
         env.put("identities", Collections.singleton(null));
 
-        expectedException.expect(IllegalArgumentException.class);
-        expectedException.expectMessage(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage());
-
-        JSch jsch = mock(JSch.class);
-        env.initialize(jsch);
+        final JSch jsch = mock(JSch.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
+            @Override
+            public void run() throws IOException {
+                env.initialize(jsch);
+            }
+        });
+        assertEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage(), exception.getMessage());
     }
 
     @Test
-    public void testInitializeJSchWithInvalidIdentity() throws IOException {
-        SFTPEnvironment env = new SFTPEnvironment();
+    public void testInitializeJSchWithInvalidIdentity() {
+        final SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
         env.put("identities", Collections.singleton("foobar"));
 
-        expectedException.expect(IllegalArgumentException.class);
-        expectedException.expectMessage(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage());
-
-        JSch jsch = mock(JSch.class);
-        env.initialize(jsch);
+        final JSch jsch = mock(JSch.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
+            @Override
+            public void run() throws IOException {
+                env.initialize(jsch);
+            }
+        });
+        assertEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage(), exception.getMessage());
     }
 
     @Test

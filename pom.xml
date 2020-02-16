@@ -82,16 +82,16 @@
     <version.fs-core>1.3</version.fs-core>
     <version.hamcrest>1.3</version.hamcrest>
     <version.jsch>0.1.55</version.jsch>
-    <version.junit>4.12</version.junit>
+    <version.junit>4.13</version.junit>
     <version.mockito>1.10.19</version.mockito>
-    <version.slf4j>1.7.26</version.slf4j>
+    <version.slf4j>1.7.30</version.slf4j>
     <!-- version 1.3.0 is no longer Java 7 compatible -->
     <version.sshd-core>1.2.0</version.sshd-core>
 
     <version.plugin.antrun>1.8</version.plugin.antrun>
     <version.plugin.assembly>3.1.1</version.plugin.assembly>
     <version.plugin.clean>3.1.0</version.plugin.clean>
-    <version.plugin.compiler>3.8.0</version.plugin.compiler>
+    <version.plugin.compiler>3.8.1</version.plugin.compiler>
     <version.plugin.dependency>3.1.1</version.plugin.dependency>
     <version.plugin.deploy>2.8.2</version.plugin.deploy>
     <version.plugin.gpg>1.6</version.plugin.gpg>
@@ -103,8 +103,8 @@
     <version.plugin.release>2.5.3</version.plugin.release>
     <version.plugin.resources>3.1.0</version.plugin.resources>
     <version.plugin.site>3.7.1</version.plugin.site>
-    <version.plugin.source>3.0.1</version.plugin.source>
-    <version.plugin.surefire>2.22.1</version.plugin.surefire>
+    <version.plugin.source>3.1.0</version.plugin.source>
+    <version.plugin.surefire>2.22.2</version.plugin.surefire>
   </properties>
 
   <dependencies>

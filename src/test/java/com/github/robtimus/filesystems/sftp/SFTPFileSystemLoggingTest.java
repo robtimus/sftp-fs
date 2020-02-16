@@ -17,9 +17,9 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.spy;
