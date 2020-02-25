@@ -17,147 +17,399 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessMode;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemException;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
 @SuppressWarnings({ "nls", "javadoc" })
-public class IdentityTest {
+public class IdentityTest extends AbstractSFTPFileSystemTest {
 
     private static final File BASE_DIR = new File("src/test/resources", IdentityTest.class.getPackage().getName().replace('.', '/'));
 
-    static File getPrivateKeyFile() {
-        return new File(BASE_DIR, "id_rsa");
+    private static final File PRIVATE_KEY_FILE = new File(BASE_DIR, "id_rsa");
+
+    private static final File PUBLIC_KEY_FILE = new File(BASE_DIR, "id_rsa.pub");
+
+    private static final String PASSPHRASE_STRING = "1234567890";
+
+    private static final byte[] PRIVATE_KEY = readContent(PRIVATE_KEY_FILE);
+
+    private static final byte[] PUBLIC_KEY = readContent(PUBLIC_KEY_FILE);
+
+    private static final byte[] PASSPHRASE = PASSPHRASE_STRING.getBytes(StandardCharsets.UTF_8);
+
+    private static final File PRIVATE_KEY_NOPASS_FILE = new File(BASE_DIR, "id_rsa_nopass");
+
+    private static final File PUBLIC_KEY_FILE_NOPASS = new File(BASE_DIR, "id_rsa_nopass.pub");
+
+    private static final byte[] PRIVATE_KEY_NOPASS = readContent(PRIVATE_KEY_NOPASS_FILE);
+
+    private static final byte[] PUBLIC_KEY_NOPASS = readContent(PUBLIC_KEY_FILE_NOPASS);
+
+    private static byte[] readContent(File file) {
+        try (InputStream input = new FileInputStream(file)) {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = input.read(buffer)) != -1) {
+                output.write(buffer, 0, len);
+            }
+            return output.toByteArray();
+
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    static File getPublicKeyFile() {
-        return new File(BASE_DIR, "id_rsa.pub");
+    static Identity fromFiles() {
+        return Identity.fromFiles(PRIVATE_KEY_FILE);
     }
 
-    static byte[] getPassphrase() {
-        return getPassphraseString().getBytes(StandardCharsets.UTF_8);
+    static Identity fromData() {
+        return Identity.fromData("test", PRIVATE_KEY.clone(), PUBLIC_KEY.clone(), PASSPHRASE.clone());
     }
 
-    static String getPassphraseString() {
-        return "1234567890";
+    static void assertIdentityFromFilesAdded(JSch jsch) throws JSchException {
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath());
     }
 
     @Test
     public void testFromFilesOnlyPrivateKeyFile() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-
-        Identity identity = Identity.fromFiles(privateKeyFile);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath());
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath());
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileAndStringPassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        String passphrase = getPassphraseString();
-
-        Identity identity = Identity.fromFiles(privateKeyFile, passphrase);
+    public void testFromFilesPrivateKeyFileAndNullStringPassphrase() throws JSchException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, (String) null);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), (String) null);
+    }
+
+    @Test
+    public void testFromFilesPrivateKeyFileAndNonNullStringPassphrase() throws JSchException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
+
+        JSch jsch = spy(new JSch());
+
+        identity.addIdentity(jsch);
+
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), PASSPHRASE_STRING);
     }
 
     @Test
     public void testFromFilesPrivateKeyFileAndNullBytePassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        byte[] passphrase = null;
-
-        Identity identity = Identity.fromFiles(privateKeyFile, passphrase);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, (byte[]) null);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), (byte[]) null);
     }
 
     @Test
     public void testFromFilesPrivateKeyFileAndNonNullBytePassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        byte[] passphrase = getPassphrase();
+        byte[] passphrase = PASSPHRASE.clone();
 
-        Identity identity = Identity.fromFiles(privateKeyFile, passphrase);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, passphrase);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), passphrase);
     }
 
     @Test
     public void testFromFilesPrivateKeyFileNullPublicKeyFileAndNullBytePassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        File publicKeyFile = null;
-        byte[] passphrase = null;
-
-        Identity identity = Identity.fromFiles(privateKeyFile, publicKeyFile, passphrase);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, null, null);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), null, passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), null, null);
     }
 
     @Test
     public void testFromFilesPrivateKeyFileNullPublicKeyFileAndNonNullBytePassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        File publicKeyFile = null;
-        byte[] passphrase = getPassphrase();
+        byte[] passphrase = PASSPHRASE.clone();
 
-        Identity identity = Identity.fromFiles(privateKeyFile, publicKeyFile, passphrase);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, null, passphrase);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), null, passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), null, passphrase);
     }
 
     @Test
     public void testFromFilesPrivateKeyFileNonNullPublicKeyFileAndNullBytePassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        File publicKeyFile = getPublicKeyFile();
-        byte[] passphrase = null;
-
-        Identity identity = Identity.fromFiles(privateKeyFile, publicKeyFile, passphrase);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, null);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), publicKeyFile.getAbsolutePath(), passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), PUBLIC_KEY_FILE.getAbsolutePath(), null);
     }
 
     @Test
     public void testFromFilesPrivateKeyFileNonNullPublicKeyFileAndNonNullBytePassphrase() throws JSchException {
-        File privateKeyFile = getPrivateKeyFile();
-        File publicKeyFile = getPublicKeyFile();
-        byte[] passphrase = getPassphrase();
+        byte[] passphrase = PASSPHRASE.clone();
 
-        Identity identity = Identity.fromFiles(privateKeyFile, publicKeyFile, passphrase);
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, passphrase);
 
         JSch jsch = spy(new JSch());
 
         identity.addIdentity(jsch);
 
-        verify(jsch).addIdentity(privateKeyFile.getAbsolutePath(), publicKeyFile.getAbsolutePath(), passphrase);
+        verify(jsch).addIdentity(PRIVATE_KEY_FILE.getAbsolutePath(), PUBLIC_KEY_FILE.getAbsolutePath(), passphrase);
+    }
+
+    @Test
+    public void testFromDataPrivateKeyNullPublicKeyAndNullBytePassphrase() throws JSchException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, null, null);
+
+        JSch jsch = spy(new JSch());
+
+        identity.addIdentity(jsch);
+
+        verify(jsch).addIdentity(name, privateKey, null, null);
+
+        assertArrayEquals(PRIVATE_KEY, privateKey);
+    }
+
+    @Test
+    public void testFromDataPrivateKeyNullPublicKeyAndNonNullBytePassphrase() throws JSchException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+        byte[] passphrase = PASSPHRASE.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, null, passphrase);
+
+        JSch jsch = spy(new JSch());
+
+        identity.addIdentity(jsch);
+
+        verify(jsch).addIdentity(name, privateKey, null, passphrase);
+
+        assertArrayEquals(PRIVATE_KEY, privateKey);
+    }
+
+    @Test
+    public void testFromDataPrivateKeyNonNullPublicKeyAndNullBytePassphrase() throws JSchException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+        byte[] publicKey = PUBLIC_KEY.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, publicKey, null);
+
+        JSch jsch = spy(new JSch());
+
+        identity.addIdentity(jsch);
+
+        verify(jsch).addIdentity(name, privateKey, publicKey, null);
+
+        assertArrayEquals(PRIVATE_KEY, privateKey);
+        assertArrayEquals(PUBLIC_KEY, publicKey);
+    }
+
+    @Test
+    public void testFromDataPrivateKeyNonNullPublicKeyAndNonNullBytePassphrase() throws JSchException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+        byte[] publicKey = PUBLIC_KEY.clone();
+        byte[] passphrase = PASSPHRASE.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, publicKey, passphrase);
+
+        JSch jsch = spy(new JSch());
+
+        identity.addIdentity(jsch);
+
+        verify(jsch).addIdentity(name, privateKey, publicKey, passphrase);
+
+        assertArrayEquals(PRIVATE_KEY, privateKey);
+        assertArrayEquals(PUBLIC_KEY, publicKey);
+    }
+
+    @Test
+    public void testLoginFromFilesOnlyPrivateKeyFile() throws IOException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileAndNullStringPassphrase() throws IOException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, (String) null);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileAndNonNullStringPassphrase() throws IOException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileAndNullBytePassphrase() throws IOException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, (byte[]) null);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileNullPublicKeyFileAndNullBytePassphrase() throws IOException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, null, null);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileNullPublicKeyFileAndNonNullBytePassphrase() throws IOException {
+        byte[] passphrase = PASSPHRASE.clone();
+
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, null, passphrase);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileNonNullPublicKeyFileAndNullBytePassphrase() throws IOException {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, PUBLIC_KEY_FILE_NOPASS, null);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesPrivateKeyFileNonNullPublicKeyFileAndNonNullBytePassphrase() throws IOException {
+        byte[] passphrase = PASSPHRASE.clone();
+
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, PUBLIC_KEY_FILE_NOPASS, passphrase);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromFilesWrongPassphrase() {
+        Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, null);
+
+        testLoginFailure(identity);
+    }
+
+    @Test
+    public void testLoginFromDataNullPublicKeyAndNullPassphrase() throws IOException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY_NOPASS.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, null, null);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromDataNullPublicKeyAndNonNullPassphrase() throws IOException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+        byte[] passphrase = PASSPHRASE.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, null, passphrase);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromDataNonNullPublicKeyAndNullPassphrase() throws IOException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY_NOPASS.clone();
+        byte[] publicKey = PUBLIC_KEY_NOPASS.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, publicKey, null);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromDataNonNullPublicKeyAndNonNullPassphrase() throws IOException {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+        byte[] publicKey = PUBLIC_KEY.clone();
+        byte[] passphrase = PASSPHRASE.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, publicKey, passphrase);
+
+        testLoginSuccess(identity);
+    }
+
+    @Test
+    public void testLoginFromDataWrongPassphrase() {
+        String name = "test";
+        byte[] privateKey = PRIVATE_KEY.clone();
+        byte[] publicKey = PUBLIC_KEY.clone();
+
+        Identity identity = Identity.fromData(name, privateKey, publicKey, null);
+
+        testLoginFailure(identity);
+    }
+
+    private void testLoginSuccess(Identity identity) throws IOException {
+        SFTPEnvironment env = createEnv()
+                .withUserInfo(null)
+                .withIdentity(identity);
+        try (FileSystem fileSystem = new SFTPFileSystemProvider().newFileSystem(getURI(), env)) {
+            fileSystem.provider().checkAccess(createPath("/"), AccessMode.READ);
+        }
+    }
+
+    private void testLoginFailure(final Identity identity) {
+        FileSystemException exception = assertThrows(FileSystemException.class, new ThrowingRunnable() {
+
+            @Override
+            public void run() throws Throwable {
+                SFTPEnvironment env = createEnv()
+                        .withUserInfo(null)
+                        .withIdentity(identity);
+                try (FileSystem fileSystem = new SFTPFileSystemProvider().newFileSystem(getURI(), env)) {
+                    // will not come here
+                }
+            }
+        });
+        assertThat(exception.getCause(), instanceOf(JSchException.class));
+        assertEquals("USERAUTH fail", exception.getMessage());
     }
 }

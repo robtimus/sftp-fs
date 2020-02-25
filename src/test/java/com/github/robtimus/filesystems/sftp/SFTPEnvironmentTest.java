@@ -80,7 +80,7 @@ public class SFTPEnvironmentTest {
 
         assertEquals(Collections.emptyMap(), env);
 
-        Identity identity = Identity.fromFiles(IdentityTest.getPrivateKeyFile());
+        Identity identity = IdentityTest.fromFiles();
 
         env.withIdentity(identity);
 
@@ -93,8 +93,8 @@ public class SFTPEnvironmentTest {
 
         assertEquals(Collections.emptyMap(), env);
 
-        Identity identity1 = Identity.fromFiles(IdentityTest.getPrivateKeyFile());
-        Identity identity2 = Identity.fromFiles(IdentityTest.getPrivateKeyFile(), IdentityTest.getPublicKeyFile(), IdentityTest.getPassphrase());
+        Identity identity1 = IdentityTest.fromFiles();
+        Identity identity2 = IdentityTest.fromData();
 
         env.withIdentities(identity1, identity2);
 
@@ -120,7 +120,7 @@ public class SFTPEnvironmentTest {
         env.initialize(jsch);
 
         verify(jsch).setIdentityRepository((IdentityRepository) env.get("identityRepository"));
-        verify(jsch).addIdentity(IdentityTest.getPrivateKeyFile().getAbsolutePath());
+        IdentityTest.assertIdentityFromFilesAdded(jsch);
         verify(jsch).setHostKeyRepository((HostKeyRepository) env.get("hostKeyRepository"));
         verify(jsch).setKnownHosts(((File) env.get("knownHosts")).getAbsolutePath());
         verifyNoMoreInteractions(jsch);
@@ -147,6 +147,7 @@ public class SFTPEnvironmentTest {
 
         final JSch jsch = mock(JSch.class);
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
+
             @Override
             public void run() throws IOException {
                 env.initialize(jsch);
@@ -163,6 +164,7 @@ public class SFTPEnvironmentTest {
 
         final JSch jsch = mock(JSch.class);
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
+
             @Override
             public void run() throws IOException {
                 env.initialize(jsch);
@@ -399,7 +401,7 @@ public class SFTPEnvironmentTest {
         env.withServerAliveInterval(500);
         env.withServerAliveCountMax(5);
         env.withIdentityRepository(new TestIdentityRepository());
-        env.withIdentity(Identity.fromFiles(IdentityTest.getPrivateKeyFile()));
+        env.withIdentity(IdentityTest.fromFiles());
         env.withHostKeyRepository(new TestHostKeyRepository());
         env.withKnownHosts(new File("known_hosts"));
         env.withAgentForwarding(false);

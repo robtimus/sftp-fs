@@ -110,4 +110,26 @@ public abstract class Identity {
             }
         };
     }
+
+    /**
+     * Creates a key pair from a private key and public key.
+     *
+     * @param name The name of the key pair.
+     * @param privateKey The private key data.
+     * @param publicKey The public key data.
+     * @param passphrase The passphrase for the private key.
+     * @return The created key pair.
+     * @since 1.4
+     */
+    public static Identity fromData(final String name, final byte[] privateKey, final byte[] publicKey, final byte[] passphrase) {
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(privateKey);
+        return new Identity() {
+
+            @Override
+            void addIdentity(JSch jsch) throws JSchException {
+                jsch.addIdentity(name, privateKey, publicKey, passphrase);
+            }
+        };
+    }
 }

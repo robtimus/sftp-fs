@@ -86,7 +86,7 @@ public class SFTPEnvironmentSetterTest {
                 { "withServerAliveInterval", "serverAliveInterval", 500, },
                 { "withServerAliveCountMax", "serverAliveCountMax", 5, },
                 { "withIdentityRepository", "identityRepository", new TestIdentityRepository(), },
-                { "withIdentities", "identities", Collections.singletonList(Identity.fromFiles(IdentityTest.getPrivateKeyFile())), },
+                { "withIdentities", "identities", Collections.singletonList(IdentityTest.fromFiles()), },
                 { "withHostKeyRepository", "hostKeyRepository", new TestHostKeyRepository(), },
                 { "withKnownHosts", "knownHosts", new File("known_hosts"), },
                 { "withAgentForwarding", "agentForwarding", false, },

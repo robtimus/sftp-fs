@@ -19,7 +19,9 @@ package com.github.robtimus.filesystems.sftp;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.spy;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.URI;
@@ -35,9 +37,13 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -45,9 +51,11 @@ import java.util.Map;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
+import org.apache.sshd.common.util.Base64;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.After;
@@ -62,6 +70,8 @@ public abstract class AbstractSFTPFileSystemTest {
 
     private static final String USERNAME = "TEST_USER";
     private static final String PASSWORD = "TEST_PASSWORD";
+    private static final PublicKey PUBLIC_KEY = readPublicKey("id_rsa.pkcs8");
+    private static final PublicKey PUBLIC_KEY_NOPASS = readPublicKey("id_rsa_nopass.pkcs8");
 
     private static int port;
     private static SshServer sshServer;
@@ -70,6 +80,30 @@ public abstract class AbstractSFTPFileSystemTest {
     private static ExceptionFactoryWrapper exceptionFactory;
     private static SFTPFileSystem sftpFileSystem;
     private static SFTPFileSystem sftpFileSystem2;
+
+    private static PublicKey readPublicKey(String resource) {
+        try {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            try (InputStream input = AbstractSFTPFileSystemTest.class.getResourceAsStream(resource)) {
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, len);
+                }
+            }
+            // public key parsing based on https://gist.github.com/destan/b708d11bd4f403506d6d5bb5fe6a82c5
+            String publicKeyContent = new String(output.toString("UTF-8"))
+                    .replace("\\n", "")
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "");
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.decodeString(publicKeyContent));
+            return keyFactory.generatePublic(keySpec);
+
+        } catch (IOException | GeneralSecurityException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     @BeforeClass
     public static void setupClass() throws NoSuchAlgorithmException, IOException {
@@ -89,6 +123,12 @@ public abstract class AbstractSFTPFileSystemTest {
             @Override
             public boolean authenticate(String username, String password, ServerSession session) {
                 return USERNAME.equals(username) && PASSWORD.equals(password);
+            }
+        });
+        sshServer.setPublickeyAuthenticator(new PublickeyAuthenticator() {
+            @Override
+            public boolean authenticate(String username, PublicKey key, ServerSession session) {
+                return USERNAME.equals(username) && (PUBLIC_KEY.equals(key) || PUBLIC_KEY_NOPASS.equals(key));
             }
         });
         sshServer.setSubsystemFactories(Arrays.<NamedFactory<Command>>asList(subSystemFactory));
