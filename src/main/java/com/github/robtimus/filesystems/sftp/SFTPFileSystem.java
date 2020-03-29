@@ -402,7 +402,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     void copy(SFTPPath source, SFTPPath target, CopyOption... options) throws IOException {
-        boolean sameFileSystem = source.getFileSystem() == target.getFileSystem();
+        boolean sameFileSystem = haveSameFileSystem(source, target);
         CopyOptions copyOptions = CopyOptions.forCopy(options);
 
         try (Channel channel = channelPool.get()) {
@@ -447,7 +447,9 @@ class SFTPFileSystem extends FileSystem {
     private void copyAcrossFileSystems(Channel sourceChannel, SFTPPath source, SftpATTRS sourceAttributes, SFTPPath target, CopyOptions options)
             throws IOException {
 
-        try (Channel targetChannel = target.getFileSystem().channelPool.getOrCreate()) {
+        @SuppressWarnings("resource")
+        SFTPFileSystem targetFileSystem = target.getFileSystem();
+        try (Channel targetChannel = targetFileSystem.channelPool.getOrCreate()) {
 
             SftpATTRS targetAttributes = findAttributes(targetChannel, target, false);
 
@@ -477,7 +479,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     void move(SFTPPath source, SFTPPath target, CopyOption... options) throws IOException {
-        boolean sameFileSystem = source.getFileSystem() == target.getFileSystem();
+        boolean sameFileSystem = haveSameFileSystem(source, target);
         CopyOptions copyOptions = CopyOptions.forMove(sameFileSystem, options);
 
         try (Channel channel = channelPool.get()) {
@@ -518,7 +520,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     boolean isSameFile(SFTPPath path, SFTPPath path2) throws IOException {
-        if (path.getFileSystem() != path2.getFileSystem()) {
+        if (!haveSameFileSystem(path, path2)) {
             return false;
         }
         if (path.equals(path2)) {
@@ -527,6 +529,11 @@ class SFTPFileSystem extends FileSystem {
         try (Channel channel = channelPool.get()) {
             return isSameFile(channel, path, path2);
         }
+    }
+
+    @SuppressWarnings("resource")
+    private boolean haveSameFileSystem(SFTPPath path, SFTPPath path2) {
+        return path.getFileSystem() == path2.getFileSystem();
     }
 
     private boolean isSameFile(Channel channel, SFTPPath path, SFTPPath path2) throws IOException {

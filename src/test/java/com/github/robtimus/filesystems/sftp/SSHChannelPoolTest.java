@@ -22,8 +22,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.Test;
+import com.github.robtimus.filesystems.sftp.SSHChannelPool.Channel;
 
 @SuppressWarnings({ "nls", "javadoc" })
 public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
@@ -38,15 +42,14 @@ public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
                 .withClientConnectionWaitTimeout(500, TimeUnit.MILLISECONDS);
 
         SSHChannelPool pool = new SSHChannelPool(uri.getHost(), uri.getPort(), env);
+        List<Channel> channels = Collections.emptyList();
         try {
             // exhaust all available clients
-            for (int i = 0; i < clientCount; i++) {
-                pool.get();
-            }
+            channels = claimChannels(pool, clientCount);
 
             long startTime = System.currentTimeMillis();
             try {
-                pool.get();
+                claimChannel(pool);
                 fail("Should never get here.");
 
             } catch (IOException e) {
@@ -57,6 +60,23 @@ public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
             }
         } finally {
             pool.close();
+            for (Channel channel : channels) {
+                channel.close();
+            }
         }
+    }
+
+    @SuppressWarnings("resource")
+    private List<Channel> claimChannels(SSHChannelPool pool, int clientCount) throws IOException {
+        List<Channel> channels = new ArrayList<>(clientCount);
+        for (int i = 0; i < clientCount; i++) {
+            channels.add(pool.get());
+        }
+        return channels;
+    }
+
+    @SuppressWarnings("resource")
+    private void claimChannel(SSHChannelPool pool) throws IOException {
+        pool.get();
     }
 }

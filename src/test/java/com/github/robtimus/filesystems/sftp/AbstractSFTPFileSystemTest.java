@@ -81,6 +81,9 @@ public abstract class AbstractSFTPFileSystemTest {
     private static SFTPFileSystem sftpFileSystem;
     private static SFTPFileSystem sftpFileSystem2;
 
+    protected final SFTPFileSystem fileSystem = sftpFileSystem;
+    protected final SFTPFileSystem fileSystem2 = sftpFileSystem2;
+
     private static PublicKey readPublicKey(String resource) {
         try {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -239,14 +242,6 @@ public abstract class AbstractSFTPFileSystemTest {
 
     protected final SFTPPath createPath(SFTPFileSystem fs, String path) {
         return new SFTPPath(fs, path);
-    }
-
-    protected final SFTPFileSystem getFileSystem() {
-        return sftpFileSystem;
-    }
-
-    protected final SFTPFileSystem getFileSystem2() {
-        return sftpFileSystem2;
     }
 
     protected final FileSystemExceptionFactory getExceptionFactory() {

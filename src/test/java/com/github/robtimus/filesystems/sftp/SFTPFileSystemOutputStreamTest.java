@@ -29,7 +29,7 @@ public class SFTPFileSystemOutputStreamTest extends AbstractSFTPFileSystemTest {
     @Test
     public void testWriteSingle() throws IOException {
 
-        try (OutputStream output = getFileSystem().newOutputStream(createPath("/foo"))) {
+        try (OutputStream output = fileSystem.newOutputStream(createPath("/foo"))) {
             output.write('H');
             output.write('e');
             output.write('l');
@@ -43,7 +43,7 @@ public class SFTPFileSystemOutputStreamTest extends AbstractSFTPFileSystemTest {
     @Test
     public void testWriteBulk() throws IOException {
 
-        try (OutputStream output = getFileSystem().newOutputStream(createPath("/foo"))) {
+        try (OutputStream output = fileSystem.newOutputStream(createPath("/foo"))) {
             output.write("Hello".getBytes());
         }
         Path file = getFile("/foo");

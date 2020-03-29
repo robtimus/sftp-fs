@@ -36,7 +36,7 @@ public class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
         Path file = addFile("/foo");
         setContents(file, content);
 
-        try (InputStream input = getFileSystem().newInputStream(createPath("/foo"))) {
+        try (InputStream input = fileSystem.newInputStream(createPath("/foo"))) {
             assertEquals('H', input.read());
             assertEquals('e', input.read());
             assertEquals('l', input.read());
@@ -60,7 +60,7 @@ public class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
         setContents(file, content);
 
         byte[] b = new byte[20];
-        try (InputStream input = getFileSystem().newInputStream(createPath("/foo"))) {
+        try (InputStream input = fileSystem.newInputStream(createPath("/foo"))) {
             assertEquals(0, input.read(b, 0, 0));
             assertEquals(5, input.read(b, 1, 5));
             assertArrayEquals(content.substring(0, 5).getBytes(), Arrays.copyOfRange(b, 1, 6));
@@ -77,20 +77,20 @@ public class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
         Path file = addFile("/foo");
         setContents(file, content);
 
-        try (InputStream input = getFileSystem().newInputStream(createPath("/foo"))) {
+        try (InputStream input = fileSystem.newInputStream(createPath("/foo"))) {
             assertEquals(0, input.skip(0));
             assertArrayEquals(content.getBytes(), readRemaining(input));
         }
-        try (InputStream input = getFileSystem().newInputStream(createPath("/foo"))) {
+        try (InputStream input = fileSystem.newInputStream(createPath("/foo"))) {
             assertEquals(5, input.skip(5));
             assertArrayEquals(content.substring(5).getBytes(), readRemaining(input));
         }
-        try (InputStream input = getFileSystem().newInputStream(createPath("/foo"))) {
+        try (InputStream input = fileSystem.newInputStream(createPath("/foo"))) {
             assertEquals(content.length(), input.skip(content.length()));
             assertEquals(-1, input.read());
             assertEquals(0, input.skip(1));
         }
-        try (InputStream input = getFileSystem().newInputStream(createPath("/foo"))) {
+        try (InputStream input = fileSystem.newInputStream(createPath("/foo"))) {
             assertEquals(content.length(), input.skip(content.length() + 1));
             assertEquals(-1, input.read());
             assertEquals(0, input.skip(1));

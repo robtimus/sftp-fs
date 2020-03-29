@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.log4j.Appender;
@@ -109,7 +110,7 @@ public class SFTPFileSystemLoggingTest extends AbstractSFTPFileSystemTest {
     @Test
     public void testLogging() throws IOException {
         URI uri = getURI();
-        try (SFTPFileSystem fs = (SFTPFileSystem) FileSystems.newFileSystem(uri, createEnv())) {
+        try (SFTPFileSystem fs = newFileSystem(uri, createEnv())) {
             SFTPFileSystemProvider.keepAlive(fs);
         }
         URI brokenUri;
@@ -162,6 +163,10 @@ public class SFTPFileSystemLoggingTest extends AbstractSFTPFileSystemTest {
         assertThat(debugMessages, hasItem(new RegexMatcher("Disconnected channel 'channel-\\d+'")));
 
         assertThat(thrown, contains(Matchers.<Throwable>instanceOf(IOException.class)));
+    }
+
+    private SFTPFileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
+        return (SFTPFileSystem) FileSystems.newFileSystem(uri, env);
     }
 
     private static final class RegexMatcher extends TypeSafeDiagnosingMatcher<String> {
