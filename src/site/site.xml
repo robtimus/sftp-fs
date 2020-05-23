@@ -19,35 +19,12 @@
   xmlns="https://maven.apache.org/xsd/decoration-1.7.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="https://maven.apache.org/xsd/decoration-1.7.0.xsd https://maven.apache.org/xsd/decoration-1.7.0.xsd">
 
-  <version position="left" />
-  <publishDate position="left" />
-
-  <skin>
-    <groupId>org.apache.maven.skins</groupId>
-    <artifactId>maven-fluido-skin</artifactId>
-    <version>1.7</version>
-  </skin>
-
   <body>
-    <!-- Workaround to get pretty-printing enabled again. See https://plus.google.com/+clementescoffier/posts/8MQM8Y4CTeu -->
-    <head><![CDATA[<script type="text/javascript">
-  $(document).ready(function () {
-    $(".source").addClass("prettyprint");
-    prettyPrint();
-  });
-</script>]]></head>
     <menu name="sftp-fs">
       <item name="Overview" href="index.html" />
       <item name="Download" href="download.html" />
       <item name="Releases" href="https://github.com/robtimus/sftp-fs/releases" />
       <item name="JavaDocs" href="apidocs/index.html" />
     </menu>
-    <menu ref="reports" />
   </body>
-
-  <custom>
-    <fluidoSkin>
-      <sideBarEnabled>true</sideBarEnabled>
-    </fluidoSkin>
-  </custom>
 </project>

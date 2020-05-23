@@ -19,7 +19,13 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.github.robtimus</groupId>
+  <parent>
+    <groupId>com.github.robtimus</groupId>
+    <artifactId>robtimus-parent</artifactId>
+    <version>1.0</version>
+    <relativePath />
+  </parent>
+
   <artifactId>sftp-fs</artifactId>
   <version>1.5-SNAPSHOT</version>
   <packaging>jar</packaging>
@@ -63,48 +69,15 @@
     <url>https://github.com/robtimus/sftp-fs/issues</url>
   </issueManagement>
 
-  <distributionManagement>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-  </distributionManagement>
-
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
     <version.java>1.7</version.java>
 
     <version.fs-core>1.3</version.fs-core>
-    <version.hamcrest>1.3</version.hamcrest>
     <version.jsch>0.1.55</version.jsch>
     <version.junit>4.13</version.junit>
     <version.mockito>1.10.19</version.mockito>
-    <version.slf4j>1.7.30</version.slf4j>
     <!-- version 1.3.0 is no longer Java 7 compatible -->
     <version.sshd-core>1.2.0</version.sshd-core>
-
-    <version.plugin.antrun>1.8</version.plugin.antrun>
-    <version.plugin.assembly>3.1.1</version.plugin.assembly>
-    <version.plugin.clean>3.1.0</version.plugin.clean>
-    <version.plugin.compiler>3.8.1</version.plugin.compiler>
-    <version.plugin.dependency>3.1.1</version.plugin.dependency>
-    <version.plugin.deploy>2.8.2</version.plugin.deploy>
-    <version.plugin.gpg>1.6</version.plugin.gpg>
-    <version.plugin.nexus-staging>1.6.8</version.plugin.nexus-staging>
-    <version.plugin.info-reports>3.0.0</version.plugin.info-reports>
-    <version.plugin.install>2.5.2</version.plugin.install>
-    <version.plugin.jar>3.1.1</version.plugin.jar>
-    <version.plugin.javadoc>3.1.0</version.plugin.javadoc>
-    <version.plugin.release>2.5.3</version.plugin.release>
-    <version.plugin.resources>3.1.0</version.plugin.resources>
-    <version.plugin.site>3.7.1</version.plugin.site>
-    <version.plugin.source>3.1.0</version.plugin.source>
-    <version.plugin.surefire>2.22.2</version.plugin.surefire>
   </properties>
 
   <dependencies>
@@ -123,7 +96,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>${version.slf4j}</version>
       <optional>true</optional>
     </dependency>
 
@@ -136,15 +108,13 @@
 
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <version>${version.hamcrest}</version>
+      <artifactId>hamcrest</artifactId>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <version>${version.mockito}</version>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -170,7 +140,7 @@
         <directory>src/main/resources</directory>
       </resource>
       <resource>
-        <directory>${basedir}</directory>
+        <directory>${project.basedir}</directory>
         <targetPath>META-INF</targetPath>
         <includes>
           <include>LICENSE.txt</include>
@@ -183,46 +153,13 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>${version.plugin.javadoc}</version>
           <configuration>
-            <charset>UTF-8</charset>
-            <docencoding>UTF-8</docencoding>
-            <splitindex>true</splitindex>
-            <author>true</author>
-            <version>true</version>
-            <notimestamp>true</notimestamp>
+            <detectJavaApiLink>false</detectJavaApiLink>
             <links>
-              <!-- Use an HTTPS URL to the JSE docs -->
               <link>https://docs.oracle.com/javase/8/docs/api/</link>
               <link>https://robtimus.github.io/fs-core/apidocs/</link>
               <link>https://epaul.github.io/jsch-documentation/javadoc/</link>
             </links>
-          </configuration>
-        </plugin>
-
-        <!-- this plugin is required to make Eclipse lifecycle errors disappear -->
-        <plugin>
-          <groupId>org.eclipse.m2e</groupId>
-          <artifactId>lifecycle-mapping</artifactId>
-          <version>1.0.0</version>
-          <configuration>
-            <lifecycleMappingMetadata>
-              <pluginExecutions>
-                <pluginExecution>
-                  <pluginExecutionFilter>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-antrun-plugin</artifactId>
-                    <versionRange>[1.0,)</versionRange>
-                    <goals>
-                      <goal>run</goal>
-                    </goals>
-                  </pluginExecutionFilter>
-                  <action>
-                    <ignore />
-                  </action>
-                </pluginExecution>
-              </pluginExecutions>
-            </lifecycleMappingMetadata>
           </configuration>
         </plugin>
       </plugins>
@@ -232,235 +169,93 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>${version.plugin.compiler}</version>
-        <configuration>
-          <source>${version.java}</source>
-          <target>${version.java}</target>
-        </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>${version.plugin.dependency}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>${version.plugin.jar}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>${version.plugin.source}</version>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>jar-no-fork</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>${version.plugin.resources}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>${version.plugin.antrun}</version>
-        <executions>
-          <execution>
-            <id>copy-license</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy todir="${project.build.directory}/apidocs/META-INF">
-                  <fileset dir="${basedir}">
-                    <include name="LICENSE.txt" />
-                  </fileset>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
-          <execution>
-            <id>copy-readme</id>
-            <phase>pre-site</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <concat destfile="${basedir}/src/site/markdown/index.md">
-                  <fileset file="${basedir}/src/site/markdown/index.header.md" />
-                  <fileset file="${basedir}/README.md" />
-                </concat>
-                <replaceregexp file="${basedir}/src/site/markdown/index.md" match="${project.url}" replace="" flags="g" />
-              </target>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
-        <version>${version.plugin.assembly}</version>
         <configuration>
           <descriptors>
             <descriptor>src/main/assembly/src.xml</descriptor>
             <descriptor>src/main/assembly/bin.xml</descriptor>
           </descriptors>
-          <attach>false</attach>
         </configuration>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-clean-plugin</artifactId>
-        <version>${version.plugin.clean}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>${version.plugin.surefire}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>${version.plugin.install}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>${version.plugin.release}</version>
-        <configuration>
-          <tagNameFormat>@{project.version}</tagNameFormat>
-          <useReleaseProfile>false</useReleaseProfile>
-          <releaseProfiles>release</releaseProfiles>
-          <goals>deploy</goals>
-        </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-gpg-plugin</artifactId>
-        <version>${version.plugin.gpg}</version>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>sign</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>
         <groupId>org.sonatype.plugins</groupId>
         <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>${version.plugin.nexus-staging}</version>
-        <extensions>true</extensions>
-        <configuration>
-          <serverId>ossrh</serverId>
-          <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-          <autoReleaseAfterClose>true</autoReleaseAfterClose>
-        </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>${version.plugin.deploy}</version>
-        <executions>
-          <execution>
-            <phase>deploy</phase>
-            <goals>
-              <goal>deploy</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
-        <version>${version.plugin.site}</version>
       </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>${version.plugin.info-reports}</version>
       </plugin>
     </plugins>
   </build>
-
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>${version.plugin.info-reports}</version>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>summary</report>
-              <report>dependency-info</report>
-              <report>dependencies</report>
-              <report>licenses</report>
-              <report>team</report>
-              <report>scm</report>
-              <report>issue-management</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${version.plugin.javadoc}</version>
-        <reportSets>
-          <reportSet>
-            <reports>
-              <report>javadoc</report>
-            </reports>
-          </reportSet>
-        </reportSets>
-      </plugin>
-    </plugins>
-  </reporting>
 </project>
