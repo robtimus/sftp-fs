@@ -19,13 +19,13 @@ package com.github.robtimus.filesystems.sftp;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import com.github.robtimus.filesystems.sftp.server.FixedSftpSubsystem;
 
 @SuppressWarnings("javadoc")
 public class SFTPFileSystemWithoutSystemDirsTest extends SFTPFileSystemTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void setupClass() throws NoSuchAlgorithmException, IOException {
         setupClass(new FixedSftpSubsystem.FactoryWithoutSystemDirs());
     }

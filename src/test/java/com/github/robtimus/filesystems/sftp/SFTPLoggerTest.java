@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -31,14 +32,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 
-@RunWith(Parameterized.class)
 @SuppressWarnings({ "nls", "javadoc" })
 public class SFTPLoggerTest {
 
@@ -65,31 +65,26 @@ public class SFTPLoggerTest {
 
     private static Properties resourceBundle;
 
-    private final Method method;
-
-    public SFTPLoggerTest(@SuppressWarnings("unused") String testName, Method method) {
-        this.method = method;
-    }
-
-    @Test
-    public void testMethodCall() throws ReflectiveOperationException {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource
+    public void testMethodCall(@SuppressWarnings("unused") String testName, Method method) throws ReflectiveOperationException {
         Object[] args = getArguments(method);
 
         if ("creatingPool".equals(method.getName()) || "createdPool".equals(method.getName())) {
-            testMethodCall(method.getName() + "WithPort", args, Arrays.copyOfRange(args, 1, args.length));
+            testMethodCall(method, method.getName() + "WithPort", args, Arrays.copyOfRange(args, 1, args.length));
             args[2] = -1;
             Object[] formatArgs = new Object[args.length - 2];
             System.arraycopy(args, 1, formatArgs, 0, 1);
             System.arraycopy(args, 3, formatArgs, 1, args.length - 3);
-            testMethodCall(method.getName() + "WithoutPort", args, formatArgs);
+            testMethodCall(method, method.getName() + "WithoutPort", args, formatArgs);
         } else if (args[args.length - 1] instanceof Exception) {
-            testMethodCall(method.getName(), args, Arrays.copyOfRange(args, 1, args.length - 1));
+            testMethodCall(method, method.getName(), args, Arrays.copyOfRange(args, 1, args.length - 1));
         } else {
-            testMethodCall(method.getName(), args, Arrays.copyOfRange(args, 1, args.length));
+            testMethodCall(method, method.getName(), args, Arrays.copyOfRange(args, 1, args.length));
         }
     }
 
-    private void testMethodCall(String resourceName, Object[] invokeArgs, Object[] formatArgs) throws ReflectiveOperationException {
+    private void testMethodCall(Method method, String resourceName, Object[] invokeArgs, Object[] formatArgs) throws ReflectiveOperationException {
         Logger logger = mock(Logger.class);
         doReturn(true).when(logger).isDebugEnabled();
         invokeArgs[0] = logger;
@@ -104,7 +99,7 @@ public class SFTPLoggerTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void loadResourceBundle() throws IOException {
         resourceBundle = new Properties();
         try (InputStream input = SFTPLogger.class.getResourceAsStream("fs.properties")) {
@@ -112,19 +107,18 @@ public class SFTPLoggerTest {
         }
     }
 
-    @Parameters(name = "{0}")
-    public static Iterable<Object[]> getParameters() {
-        List<Object[]> parameters = new ArrayList<>();
+    static Stream<Arguments> testMethodCall() {
+        List<Arguments> parameters = new ArrayList<>();
         collectParameters(parameters);
-        return parameters;
+        return parameters.stream();
     }
 
-    private static void collectParameters(List<Object[]> parameters) {
+    private static void collectParameters(List<Arguments> parameters) {
         for (Method method : SFTPLogger.class.getMethods()) {
             if (method.getDeclaringClass() != Object.class) {
                 Class<?>[] parameterTypes = method.getParameterTypes();
                 if (parameterTypes.length > 0 && parameterTypes[0] == Logger.class) {
-                    parameters.add(new Object[] { method.getName(), method });
+                    parameters.add(arguments(method.getName(), method));
                 }
             }
         }

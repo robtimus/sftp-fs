@@ -21,8 +21,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.io.IOException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryStream;
@@ -35,7 +36,8 @@ import java.util.regex.Pattern;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import com.github.robtimus.filesystems.Messages;
 
 @SuppressWarnings({ "nls", "javadoc" })
 public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTest {
@@ -121,23 +123,21 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         assertThat(names, everyItem(matcher));
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testIteratorAfterClose() throws IOException {
         try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), AcceptAllFilter.INSTANCE)) {
             stream.close();
-            stream.iterator();
+            IllegalStateException exception = assertThrows(IllegalStateException.class, stream::iterator);
+            assertEquals(Messages.directoryStream().closed().getMessage(), exception.getMessage());
         }
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testIteratorAfterIterator() throws IOException {
-        boolean iteratorCalled = false;
         try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), AcceptAllFilter.INSTANCE)) {
             stream.iterator();
-            iteratorCalled = true;
-            stream.iterator();
-        } finally {
-            assertTrue(iteratorCalled);
+            IllegalStateException exception = assertThrows(IllegalStateException.class, stream::iterator);
+            assertEquals(Messages.directoryStream().iteratorAlreadyReturned().getMessage(), exception.getMessage());
         }
     }
 
@@ -217,14 +217,17 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         assertThat(names, containsInAnyOrder(matchers));
     }
 
-    @Test(expected = DirectoryIteratorException.class)
+    @Test
     public void testThrowWhileIterating() throws IOException {
         addFile("/foo");
 
         try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), ThrowingFilter.INSTANCE)) {
-            for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
-                iterator.next();
-            }
+            DirectoryIteratorException exception = assertThrows(DirectoryIteratorException.class, () -> {
+                for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
+                    iterator.next();
+                }
+            });
+            assertThat(exception.getCause(), instanceOf(IOException.class));
         }
     }
 

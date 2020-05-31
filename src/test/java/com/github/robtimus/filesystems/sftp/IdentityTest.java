@@ -19,9 +19,9 @@ package com.github.robtimus.filesystems.sftp;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import java.io.ByteArrayOutputStream;
@@ -33,8 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessMode;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemException;
-import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.Test;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
@@ -397,18 +396,10 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     private void testLoginFailure(final Identity identity) {
-        FileSystemException exception = assertThrows(FileSystemException.class, new ThrowingRunnable() {
-
-            @Override
-            public void run() throws Throwable {
-                SFTPEnvironment env = createEnv()
-                        .withUserInfo(null)
-                        .withIdentity(identity);
-                try (FileSystem fileSystem = new SFTPFileSystemProvider().newFileSystem(getURI(), env)) {
-                    // will not come here
-                }
-            }
-        });
+        SFTPEnvironment env = createEnv()
+                .withUserInfo(null)
+                .withIdentity(identity);
+        FileSystemException exception = assertThrows(FileSystemException.class, () -> new SFTPFileSystemProvider().newFileSystem(getURI(), env));
         assertThat(exception.getCause(), instanceOf(JSchException.class));
         assertEquals("USERAUTH fail", exception.getMessage());
     }

@@ -168,12 +168,7 @@ class SFTPFileSystem extends FileSystem {
     @Override
     public PathMatcher getPathMatcher(String syntaxAndPattern) {
         final Pattern pattern = PathMatcherSupport.toPattern(syntaxAndPattern);
-        return new PathMatcher() {
-            @Override
-            public boolean matches(Path path) {
-                return pattern.matcher(path.toString()).matches();
-            }
-        };
+        return path -> pattern.matcher(path.toString()).matches();
     }
 
     @Override

@@ -22,12 +22,12 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.0</version>
+    <version>1.0.1</version>
     <relativePath />
   </parent>
 
   <artifactId>sftp-fs</artifactId>
-  <version>1.5-SNAPSHOT</version>
+  <version>2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>sftp-fs</name>
@@ -70,14 +70,9 @@
   </issueManagement>
 
   <properties>
-    <version.java>1.7</version.java>
-
     <version.fs-core>1.3</version.fs-core>
     <version.jsch>0.1.55</version.jsch>
-    <version.junit>4.13</version.junit>
-    <version.mockito>1.10.19</version.mockito>
-    <!-- version 1.3.0 is no longer Java 7 compatible -->
-    <version.sshd-core>1.2.0</version.sshd-core>
+    <version.sshd-core>1.7.0</version.sshd-core>
   </properties>
 
   <dependencies>
@@ -100,9 +95,8 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${version.junit}</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -154,9 +148,7 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <configuration>
-            <detectJavaApiLink>false</detectJavaApiLink>
             <links>
-              <link>https://docs.oracle.com/javase/8/docs/api/</link>
               <link>https://robtimus.github.io/fs-core/apidocs/</link>
               <link>https://epaul.github.io/jsch-documentation/javadoc/</link>
             </links>
@@ -179,6 +171,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>com.github.robtimus.filesystems.sftp</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
       </plugin>
 
       <plugin>

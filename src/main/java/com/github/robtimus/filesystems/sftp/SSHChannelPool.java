@@ -500,12 +500,9 @@ final class SSHChannelPool {
 
         List<LsEntry> listFiles(String path) throws IOException {
             final List<LsEntry> entries = new ArrayList<>();
-            LsEntrySelector selector = new LsEntrySelector() {
-                @Override
-                public int select(LsEntry entry) {
-                    entries.add(entry);
-                    return CONTINUE;
-                }
+            LsEntrySelector selector = entry -> {
+                entries.add(entry);
+                return LsEntrySelector.CONTINUE;
             };
             try {
                 channel.ls(path, selector);

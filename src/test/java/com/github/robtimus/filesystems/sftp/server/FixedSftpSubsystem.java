@@ -29,7 +29,9 @@ import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.AbstractSftpEventListenerAdapter;
 import org.apache.sshd.server.subsystem.sftp.DirectoryHandle;
 import org.apache.sshd.server.subsystem.sftp.Handle;
+import org.apache.sshd.server.subsystem.sftp.SftpErrorStatusDataHandler;
 import org.apache.sshd.server.subsystem.sftp.SftpEventListener;
+import org.apache.sshd.server.subsystem.sftp.SftpFileSystemAccessor;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystem;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.apache.sshd.server.subsystem.sftp.UnsupportedAttributePolicy;
@@ -42,8 +44,9 @@ import org.apache.sshd.server.subsystem.sftp.UnsupportedAttributePolicy;
 @SuppressWarnings("javadoc")
 public class FixedSftpSubsystem extends SftpSubsystem {
 
-    public FixedSftpSubsystem(ExecutorService executorService, boolean shutdownOnExit, UnsupportedAttributePolicy policy) {
-        super(executorService, shutdownOnExit, policy);
+    public FixedSftpSubsystem(ExecutorService executorService, boolean shutdownOnExit, UnsupportedAttributePolicy policy,
+            SftpFileSystemAccessor accessor, SftpErrorStatusDataHandler errorStatusDataHandler) {
+        super(executorService, shutdownOnExit, policy, accessor, errorStatusDataHandler);
     }
 
     @Override
@@ -56,7 +59,8 @@ public class FixedSftpSubsystem extends SftpSubsystem {
 
         @Override
         public Command create() {
-            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy());
+            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy(),
+                    getFileSystemAccessor(), getErrorStatusDataHandler());
             Collection<? extends SftpEventListener> listeners = getRegisteredListeners();
             if (GenericUtils.size(listeners) > 0) {
                 for (SftpEventListener l : listeners) {
@@ -72,7 +76,8 @@ public class FixedSftpSubsystem extends SftpSubsystem {
 
         @Override
         public Command create() {
-            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy());
+            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy(),
+                    getFileSystemAccessor(), getErrorStatusDataHandler());
             Collection<? extends SftpEventListener> listeners = getRegisteredListeners();
             if (GenericUtils.size(listeners) > 0) {
                 for (SftpEventListener l : listeners) {

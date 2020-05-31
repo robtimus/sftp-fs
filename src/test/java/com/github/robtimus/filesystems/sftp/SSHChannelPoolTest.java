@@ -17,22 +17,24 @@
 
 package com.github.robtimus.filesystems.sftp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.sftp.SSHChannelPool.Channel;
 
-@SuppressWarnings({ "nls", "javadoc" })
+@SuppressWarnings("javadoc")
 public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
 
-    @Test(timeout = 1000L)
+    @Test
     public void testGetWithTimeout() throws Exception {
         final int clientCount = 3;
 
@@ -42,22 +44,17 @@ public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
                 .withClientConnectionWaitTimeout(500, TimeUnit.MILLISECONDS);
 
         SSHChannelPool pool = new SSHChannelPool(uri.getHost(), uri.getPort(), env);
-        List<Channel> channels = Collections.emptyList();
+        List<Channel> channels = new ArrayList<>();
         try {
-            // exhaust all available clients
-            channels = claimChannels(pool, clientCount);
+            assertTimeoutPreemptively(Duration.ofSeconds(1), () -> {
+                // exhaust all available clients
+                claimChannels(pool, clientCount, channels);
 
-            long startTime = System.currentTimeMillis();
-            try {
-                claimChannel(pool);
-                fail("Should never get here.");
-
-            } catch (IOException e) {
-                String expected = SFTPMessages.clientConnectionWaitTimeoutExpired();
-
-                assertEquals("timeout expired exception thrown", expected, e.getMessage());
-                assertTrue("timeout after specified duration", System.currentTimeMillis() - startTime >= 500);
-            }
+                long startTime = System.currentTimeMillis();
+                IOException exception = assertThrows(IOException.class, () -> claimChannel(pool));
+                assertEquals(SFTPMessages.clientConnectionWaitTimeoutExpired(), exception.getMessage());
+                assertThat(startTime, lessThanOrEqualTo(System.currentTimeMillis() - 500));
+            });
         } finally {
             pool.close();
             for (Channel channel : channels) {
@@ -67,12 +64,10 @@ public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
     }
 
     @SuppressWarnings("resource")
-    private List<Channel> claimChannels(SSHChannelPool pool, int clientCount) throws IOException {
-        List<Channel> channels = new ArrayList<>(clientCount);
+    private void claimChannels(SSHChannelPool pool, int clientCount, List<Channel> channels) throws IOException {
         for (int i = 0; i < clientCount; i++) {
             channels.add(pool.get());
         }
-        return channels;
     }
 
     @SuppressWarnings("resource")

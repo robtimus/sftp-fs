@@ -17,8 +17,8 @@
 
 package com.github.robtimus.filesystems.sftp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -34,8 +34,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
-import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.HostKey;
@@ -146,13 +145,7 @@ public class SFTPEnvironmentTest {
         env.put("identities", Collections.singleton(null));
 
         final JSch jsch = mock(JSch.class);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
-
-            @Override
-            public void run() throws IOException {
-                env.initialize(jsch);
-            }
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(jsch));
         assertEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage(), exception.getMessage());
     }
 
@@ -163,13 +156,7 @@ public class SFTPEnvironmentTest {
         env.put("identities", Collections.singleton("foobar"));
 
         final JSch jsch = mock(JSch.class);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
-
-            @Override
-            public void run() throws IOException {
-                env.initialize(jsch);
-            }
-        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(jsch));
         assertEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage(), exception.getMessage());
     }
 
@@ -266,8 +253,7 @@ public class SFTPEnvironmentTest {
 
         env.initializePreConnect(channel);
 
-        // can't verify setAgentForwarding because it's not properly mocked
-        //verify(channel).setAgentForwarding((boolean) env.get("agentForwarding"));
+        verify(channel).setAgentForwarding((boolean) env.get("agentForwarding"));
         verify(channel).setFilenameEncoding((String) env.get("filenameEncoding"));
         verifyNoMoreInteractions(channel);
     }

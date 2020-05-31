@@ -17,7 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,23 +45,21 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
-import org.apache.sshd.common.util.Base64;
-import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import com.github.robtimus.filesystems.sftp.server.FixedSftpSubsystem;
 import com.jcraft.jsch.SftpException;
 
@@ -100,7 +98,7 @@ public abstract class AbstractSFTPFileSystemTest {
                     .replace("-----BEGIN PUBLIC KEY-----", "")
                     .replace("-----END PUBLIC KEY-----", "");
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.decodeString(publicKeyContent));
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getMimeDecoder().decode(publicKeyContent));
             return keyFactory.generatePublic(keySpec);
 
         } catch (IOException | GeneralSecurityException e) {
@@ -108,7 +106,7 @@ public abstract class AbstractSFTPFileSystemTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupClass() throws NoSuchAlgorithmException, IOException {
         setupClass(new FixedSftpSubsystem.Factory());
     }
@@ -134,7 +132,7 @@ public abstract class AbstractSFTPFileSystemTest {
                 return USERNAME.equals(username) && (PUBLIC_KEY.equals(key) || PUBLIC_KEY_NOPASS.equals(key));
             }
         });
-        sshServer.setSubsystemFactories(Arrays.<NamedFactory<Command>>asList(subSystemFactory));
+        sshServer.setSubsystemFactories(Arrays.asList(subSystemFactory));
 
         rootPath = Files.createTempDirectory("sftp-fs");
         defaultDir = rootPath.resolve("home");
@@ -157,7 +155,7 @@ public abstract class AbstractSFTPFileSystemTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupClass() throws IOException {
         Files.deleteIfExists(defaultDir);
         Files.deleteIfExists(rootPath);
@@ -188,14 +186,14 @@ public abstract class AbstractSFTPFileSystemTest {
                 .withFileSystemExceptionFactory(exceptionFactory);
     }
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
         Files.createDirectories(defaultDir);
 
         exceptionFactory.delegate = spy(DefaultFileSystemExceptionFactory.INSTANCE);
     }
 
-    @After
+    @AfterEach
     public void cleanup() throws IOException {
         exceptionFactory.delegate = null;
 
