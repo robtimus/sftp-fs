@@ -28,13 +28,17 @@ import com.jcraft.jsch.JSchException;
  * @author Rob Spoor
  * @since 1.2
  */
-public abstract class Identity {
+public final class Identity {
 
-    private Identity() {
-        // private constructor to prevent direct initialization
+    private final JSchConsumer consumer;
+
+    private Identity(JSchConsumer consumer) {
+        this.consumer = consumer;
     }
 
-    abstract void addIdentity(JSch jsch) throws JSchException;
+    void addIdentity(JSch jsch) throws JSchException {
+        consumer.accept(jsch);
+    }
 
     /**
      * Creates a key pair from private key and public key files.
@@ -45,13 +49,7 @@ public abstract class Identity {
      */
     public static Identity fromFiles(final File privateKeyFile) {
         Objects.requireNonNull(privateKeyFile);
-        return new Identity() {
-
-            @Override
-            void addIdentity(JSch jsch) throws JSchException {
-                jsch.addIdentity(privateKeyFile.getAbsolutePath());
-            }
-        };
+        return new Identity(jsch -> jsch.addIdentity(privateKeyFile.getAbsolutePath()));
     }
 
     /**
@@ -64,13 +62,7 @@ public abstract class Identity {
      */
     public static Identity fromFiles(final File privateKeyFile, final String passphrase) {
         Objects.requireNonNull(privateKeyFile);
-        return new Identity() {
-
-            @Override
-            void addIdentity(JSch jsch) throws JSchException {
-                jsch.addIdentity(privateKeyFile.getAbsolutePath(), passphrase);
-            }
-        };
+        return new Identity(jsch -> jsch.addIdentity(privateKeyFile.getAbsolutePath(), passphrase));
     }
 
     /**
@@ -83,13 +75,7 @@ public abstract class Identity {
      */
     public static Identity fromFiles(final File privateKeyFile, final byte[] passphrase) {
         Objects.requireNonNull(privateKeyFile);
-        return new Identity() {
-
-            @Override
-            void addIdentity(JSch jsch) throws JSchException {
-                jsch.addIdentity(privateKeyFile.getAbsolutePath(), passphrase);
-            }
-        };
+        return new Identity(jsch -> jsch.addIdentity(privateKeyFile.getAbsolutePath(), passphrase));
     }
 
     /**
@@ -102,13 +88,8 @@ public abstract class Identity {
      */
     public static Identity fromFiles(final File privateKeyFile, final File publicKeyFile, final byte[] passphrase) {
         Objects.requireNonNull(privateKeyFile);
-        return new Identity() {
-
-            @Override
-            void addIdentity(JSch jsch) throws JSchException {
-                jsch.addIdentity(privateKeyFile.getAbsolutePath(), publicKeyFile == null ? null : publicKeyFile.getAbsolutePath(), passphrase);
-            }
-        };
+        final String publicKeyPath = publicKeyFile == null ? null : publicKeyFile.getAbsolutePath();
+        return new Identity(jsch -> jsch.addIdentity(privateKeyFile.getAbsolutePath(), publicKeyPath, passphrase));
     }
 
     /**
@@ -124,12 +105,11 @@ public abstract class Identity {
     public static Identity fromData(final String name, final byte[] privateKey, final byte[] publicKey, final byte[] passphrase) {
         Objects.requireNonNull(name);
         Objects.requireNonNull(privateKey);
-        return new Identity() {
+        return new Identity(jsch -> jsch.addIdentity(name, privateKey, publicKey, passphrase));
+    }
 
-            @Override
-            void addIdentity(JSch jsch) throws JSchException {
-                jsch.addIdentity(name, privateKey, publicKey, passphrase);
-            }
-        };
+    private interface JSchConsumer {
+
+        void accept(JSch jsch) throws JSchException;
     }
 }
