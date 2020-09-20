@@ -31,11 +31,10 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.sftp.SSHChannelPool.Channel;
 
-@SuppressWarnings("javadoc")
-public class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
+class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
 
     @Test
-    public void testGetWithTimeout() throws Exception {
+    void testGetWithTimeout() throws Exception {
         final int clientCount = 3;
 
         URI uri = getURI();

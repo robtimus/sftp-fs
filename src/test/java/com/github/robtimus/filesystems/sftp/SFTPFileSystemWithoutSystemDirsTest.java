@@ -22,11 +22,10 @@ import java.security.NoSuchAlgorithmException;
 import org.junit.jupiter.api.BeforeAll;
 import com.github.robtimus.filesystems.sftp.server.FixedSftpSubsystem;
 
-@SuppressWarnings("javadoc")
-public class SFTPFileSystemWithoutSystemDirsTest extends SFTPFileSystemTest {
+class SFTPFileSystemWithoutSystemDirsTest extends SFTPFileSystemTest {
 
     @BeforeAll
-    public static void setupClass() throws NoSuchAlgorithmException, IOException {
+    static void setupClass() throws NoSuchAlgorithmException, IOException {
         setupClass(new FixedSftpSubsystem.FactoryWithoutSystemDirs());
     }
 }

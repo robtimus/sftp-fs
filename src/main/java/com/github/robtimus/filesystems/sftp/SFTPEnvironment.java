@@ -21,7 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
-import java.nio.file.FileStore;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -101,7 +100,6 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     private static final String CLIENT_CONNECTION_COUNT = "clientConnectionCount"; //$NON-NLS-1$
     private static final String CLIENT_CONNECTION_WAIT_TIMEOUT = "clientConnectionWaitTimeout"; //$NON-NLS-1$
     private static final String FILE_SYSTEM_EXCEPTION_FACTORY = "fileSystemExceptionFactory"; //$NON-NLS-1$
-    private static final String CALCULATE_ACTUAL_TOTAL_SPACE = "calculateActualTotalSpace"; //$NON-NLS-1$
 
     private Map<String, Object> map;
 
@@ -482,22 +480,6 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      */
     public SFTPEnvironment withFileSystemExceptionFactory(FileSystemExceptionFactory factory) {
         put(FILE_SYSTEM_EXCEPTION_FACTORY, factory);
-        return this;
-    }
-
-    /**
-     * Stores whether or not {@link FileStore#getTotalSpace()} should calculate the actual total space by traversing the file system.
-     * If not explicitly set to {@code true}, the method will return {@link Long#MAX_VALUE} instead.
-     *
-     * @param calculateActualTotalSpace {@code true} if {@link FileStore#getTotalSpace()} should calculate the actual total space by traversing the
-     *            file system, or {@code false} otherwise.
-     * @return This object.
-     * @deprecated {@link FileStore#getTotalSpace()} does not need to traverse the file system, because that would calculate the total <em>used</em>
-     *             space, not the total space.
-     */
-    @Deprecated
-    public SFTPEnvironment withActualTotalSpaceCalculation(boolean calculateActualTotalSpace) {
-        put(CALCULATE_ACTUAL_TOTAL_SPACE, calculateActualTotalSpace);
         return this;
     }
 

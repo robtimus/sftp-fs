@@ -22,6 +22,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.matchesRegex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.io.IOException;
@@ -33,17 +34,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.Messages;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTest {
 
     @Test
-    public void testIterator() throws IOException {
+    void testIterator() throws IOException {
         final int count = 100;
 
         List<Matcher<? super String>> matchers = new ArrayList<>();
@@ -53,7 +52,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         }
 
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE)) {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), entry -> true)) {
             for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
                 names.add(iterator.next().getFileName().toString());
             }
@@ -62,7 +61,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testFilteredIterator() throws IOException {
+    void testFilteredIterator() throws IOException {
         final int count = 100;
 
         List<Matcher<? super String>> matchers = new ArrayList<>();
@@ -84,32 +83,18 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testCloseWhileIterating() throws IOException {
+    void testCloseWhileIterating() throws IOException {
         final int count = 100;
 
         // there is no guaranteed order, just a count
         for (int i = 0; i < count; i++) {
             addFile("/foo/file" + i);
         }
-        Matcher<String> matcher = new TypeSafeDiagnosingMatcher<String>() {
-            private final Pattern pattern = Pattern.compile("file\\d+");
-
-            @Override
-            protected boolean matchesSafely(String item, Description mismatchDescription) {
-                return item != null && pattern.matcher(item).matches();
-            }
-
-            @Override
-            public void describeTo(Description description) {
-                description
-                        .appendText("matches ")
-                        .appendValue(pattern);
-            }
-        };
+        Matcher<String> matcher = matchesRegex("file\\d+");
         int expectedCount = count / 2;
 
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE)) {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), entry -> true)) {
 
             int index = 0;
             for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
@@ -124,8 +109,8 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testIteratorAfterClose() throws IOException {
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), AcceptAllFilter.INSTANCE)) {
+    void testIteratorAfterClose() throws IOException {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), entry -> true)) {
             stream.close();
             IllegalStateException exception = assertThrows(IllegalStateException.class, stream::iterator);
             assertEquals(Messages.directoryStream().closed().getMessage(), exception.getMessage());
@@ -133,8 +118,8 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testIteratorAfterIterator() throws IOException {
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), AcceptAllFilter.INSTANCE)) {
+    void testIteratorAfterIterator() throws IOException {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), entry -> true)) {
             stream.iterator();
             IllegalStateException exception = assertThrows(IllegalStateException.class, stream::iterator);
             assertEquals(Messages.directoryStream().iteratorAlreadyReturned().getMessage(), exception.getMessage());
@@ -142,7 +127,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testDeleteWhileIterating() throws IOException {
+    void testDeleteWhileIterating() throws IOException {
         final int count = 100;
 
         List<Matcher<? super String>> matchers = new ArrayList<>();
@@ -153,7 +138,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         }
 
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE)) {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), entry -> true)) {
 
             int index = 0;
             for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
@@ -167,7 +152,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testDeleteChildrenWhileIterating() throws IOException {
+    void testDeleteChildrenWhileIterating() throws IOException {
         final int count = 100;
 
         List<Matcher<? super String>> matchers = new ArrayList<>();
@@ -178,7 +163,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         }
 
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE)) {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), entry -> true)) {
 
             int index = 0;
             for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
@@ -195,7 +180,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testDeleteBeforeIterator() throws IOException {
+    void testDeleteBeforeIterator() throws IOException {
         final int count = 100;
 
         List<Matcher<? super String>> matchers = new ArrayList<>();
@@ -207,7 +192,7 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         }
 
         List<String> names = new ArrayList<>();
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE)) {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/foo"), entry -> true)) {
 
             delete("/foo");
             for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
@@ -218,26 +203,19 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
     }
 
     @Test
-    public void testThrowWhileIterating() throws IOException {
+    void testThrowWhileIterating() throws IOException {
         addFile("/foo");
 
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), ThrowingFilter.INSTANCE)) {
+        Filter<Path> filter = entry -> {
+            throw new IOException();
+        };
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), filter)) {
             DirectoryIteratorException exception = assertThrows(DirectoryIteratorException.class, () -> {
                 for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
                     iterator.next();
                 }
             });
             assertThat(exception.getCause(), instanceOf(IOException.class));
-        }
-    }
-
-    private static final class AcceptAllFilter implements Filter<Path> {
-
-        private static final AcceptAllFilter INSTANCE = new AcceptAllFilter();
-
-        @Override
-        public boolean accept(Path entry) {
-            return true;
         }
     }
 
@@ -252,16 +230,6 @@ public class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTes
         @Override
         public boolean accept(Path entry) {
             return pattern.matcher(entry.getFileName().toString()).matches();
-        }
-    }
-
-    private static final class ThrowingFilter implements Filter<Path> {
-
-        private static final ThrowingFilter INSTANCE = new ThrowingFilter();
-
-        @Override
-        public boolean accept(Path entry) throws IOException {
-            throw new IOException();
         }
     }
 }

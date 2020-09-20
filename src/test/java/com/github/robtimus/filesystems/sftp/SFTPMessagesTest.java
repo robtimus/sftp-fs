@@ -39,8 +39,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPMessagesTest {
+@SuppressWarnings("nls")
+class SFTPMessagesTest {
 
     private static final Map<Class<?>, Object> INSTANCES;
 
@@ -88,7 +88,7 @@ public class SFTPMessagesTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource
-    public void testMethodCall(@SuppressWarnings("unused") String testName, Method method, Object target) {
+    void testMethodCall(@SuppressWarnings("unused") String testName, Method method, Object target) {
         Object obj = Modifier.isStatic(method.getModifiers()) ? null : target;
         Object[] args = getArguments(method);
         assertDoesNotThrow(() -> method.invoke(obj, args));

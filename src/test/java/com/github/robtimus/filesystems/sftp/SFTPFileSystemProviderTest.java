@@ -46,13 +46,13 @@ import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
     // support for Paths and Files
 
     @Test
-    public void testPathsAndFilesSupport() throws IOException {
+    void testPathsAndFilesSupport() throws IOException {
 
         try (SFTPFileSystem fs = newFileSystem(createEnv())) {
             Path path = Paths.get(URI.create(getBaseUrl() + "/foo"));
@@ -89,7 +89,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testPathsAndFilesSupportFileSystemNotFound() {
+    void testPathsAndFilesSupportFileSystemNotFound() {
         URI uri = URI.create("sftp://sftp.github.com/");
         FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class,
                 () -> Paths.get(uri));
@@ -99,7 +99,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystemProvider.removeFileSystem
 
     @Test
-    public void testRemoveFileSystem() throws IOException {
+    void testRemoveFileSystem() throws IOException {
         addDirectory("/foo/bar");
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
@@ -118,7 +118,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystemProvider.getPath
 
     @Test
-    public void testGetPath() throws IOException {
+    void testGetPath() throws IOException {
         Map<String, String> inputs = new HashMap<>();
         inputs.put("/", "/");
         inputs.put("foo", "/home/foo");
@@ -145,7 +145,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testGetPathNoScheme() {
+    void testGetPathNoScheme() {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         URI uri = URI.create("/foo/bar");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
@@ -153,7 +153,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testGetPathInvalidScheme() {
+    void testGetPathInvalidScheme() {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         URI uri = URI.create("https://www.github.com/");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
@@ -161,7 +161,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testGetPathFileSystemNotFound() {
+    void testGetPathFileSystemNotFound() {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         URI uri = URI.create("sftp://sftp.github.com/");
         FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
@@ -171,7 +171,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystemProvider.getFileAttributeView
 
     @Test
-    public void testGetFileAttributeViewBasic() throws IOException {
+    void testGetFileAttributeViewBasic() throws IOException {
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
@@ -184,7 +184,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testGetFileAttributeViewPosix() throws IOException {
+    void testGetFileAttributeViewPosix() throws IOException {
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
@@ -197,7 +197,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testGetFileAttributeViewReadAttributes() throws IOException {
+    void testGetFileAttributeViewReadAttributes() throws IOException {
         addDirectory("/foo/bar");
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
@@ -215,7 +215,7 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystemProvider.keepAlive
 
     @Test
-    public void testKeepAliveWithFTPFileSystem() throws IOException {
+    void testKeepAliveWithFTPFileSystem() throws IOException {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
             assertDoesNotThrow(() -> SFTPFileSystemProvider.keepAlive(fs));
@@ -223,21 +223,21 @@ public class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testKeepAliveWithNonFTPFileSystem() {
+    void testKeepAliveWithNonFTPFileSystem() {
         @SuppressWarnings("resource")
         FileSystem defaultFileSystem = FileSystems.getDefault();
         assertThrows(ProviderMismatchException.class, () -> SFTPFileSystemProvider.keepAlive(defaultFileSystem));
     }
 
     @Test
-    public void testKeepAliveWithNullFTPFileSystem() {
+    void testKeepAliveWithNullFTPFileSystem() {
         assertThrows(ProviderMismatchException.class, () -> SFTPFileSystemProvider.keepAlive(null));
     }
 
     // SFTPFileSystemProvider.createDirectory through Files.createDirectories
 
     @Test
-    public void testCreateDirectories() throws IOException {
+    void testCreateDirectories() throws IOException {
         addDirectory("/foo/bar");
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();

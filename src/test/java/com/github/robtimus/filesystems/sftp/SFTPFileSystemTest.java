@@ -43,7 +43,6 @@ import java.nio.file.AccessMode;
 import java.nio.file.CopyOption;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.DirectoryStream;
-import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -71,13 +70,13 @@ import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
 import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
 import com.jcraft.jsch.SftpException;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
     // SFTPFileSystem.getPath
 
     @Test
-    public void testGetPath() {
+    void testGetPath() {
         testGetPath("/", "/");
         testGetPath("/foo/bar", "/", "/foo", "/bar");
         testGetPath("/foo/../bar", "/foo/", "../bar");
@@ -92,14 +91,14 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.keepAlive
 
     @Test
-    public void testKeepAlive() {
+    void testKeepAlive() {
         assertDoesNotThrow(fileSystem::keepAlive);
     }
 
     // SFTPFileSystem.toUri
 
     @Test
-    public void testToUri() {
+    void testToUri() {
         final String prefix = getBaseUrl();
 
         testToUri("/", prefix + "/");
@@ -120,7 +119,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.toAbsolutePath
 
     @Test
-    public void testToAbsolutePath() {
+    void testToAbsolutePath() {
 
         testToAbsolutePath("/", "/");
         testToAbsolutePath("/foo/bar", "/foo/bar");
@@ -140,7 +139,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.toRealPath
 
     @Test
-    public void testToRealPathNoFollowLinks() throws IOException {
+    void testToRealPathNoFollowLinks() throws IOException {
         Path foo = addDirectory("/foo");
         addDirectory("/foo/bar");
         addDirectory("/bar");
@@ -175,7 +174,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testToRealPathFollowLinks() throws IOException {
+    void testToRealPathFollowLinks() throws IOException {
         Path foo = addDirectory("/foo");
         addDirectory("/foo/bar");
         addDirectory("/bar");
@@ -210,7 +209,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testToRealPathBrokenLink() throws IOException {
+    void testToRealPathBrokenLink() throws IOException {
         addSymLink("/foo", getPath("/bar"));
 
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> createPath("/foo").toRealPath());
@@ -218,7 +217,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testToRealPathNotExisting() {
+    void testToRealPathNotExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> createPath("/foo").toRealPath());
         assertEquals("/foo", exception.getFile());
     }
@@ -226,7 +225,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.newInputStream
 
     @Test
-    public void testNewInputStream() throws IOException {
+    void testNewInputStream() throws IOException {
         addFile("/foo/bar");
 
         try (InputStream input = fileSystem.newInputStream(createPath("/foo/bar"))) {
@@ -237,7 +236,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewInputStreamDeleteOnClose() throws IOException {
+    void testNewInputStreamDeleteOnClose() throws IOException {
         addFile("/foo/bar");
 
         OpenOption[] options = { StandardOpenOption.DELETE_ON_CLOSE };
@@ -249,7 +248,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewInputStreamSFTPFailure() {
+    void testNewInputStreamSFTPFailure() {
 
         // failure: file not found
 
@@ -262,7 +261,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.newOutputStream
 
     @Test
-    public void testNewOutputStreamExisting() throws IOException {
+    void testNewOutputStreamExisting() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -278,7 +277,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamExistingDeleteOnClose() throws IOException {
+    void testNewOutputStreamExistingDeleteOnClose() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -296,7 +295,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamExistingCreate() throws IOException {
+    void testNewOutputStreamExistingCreate() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -312,7 +311,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamExistingCreateDeleteOnClose() throws IOException {
+    void testNewOutputStreamExistingCreateDeleteOnClose() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -329,7 +328,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamExistingCreateNew() throws IOException {
+    void testNewOutputStreamExistingCreateNew() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -345,7 +344,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamExistingSFTPFailure() throws IOException {
+    void testNewOutputStreamExistingSFTPFailure() throws IOException {
         addDirectory("/foo");
         Path bar = addFile("/foo/bar");
         bar.toFile().setReadOnly();
@@ -362,7 +361,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamExistingSFTPFailureDeleteOnClose() throws IOException {
+    void testNewOutputStreamExistingSFTPFailureDeleteOnClose() throws IOException {
         addDirectory("/foo");
         Path bar = addFile("/foo/bar");
         bar.toFile().setReadOnly();
@@ -379,7 +378,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamNonExistingNoCreate() throws IOException {
+    void testNewOutputStreamNonExistingNoCreate() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.WRITE };
@@ -391,7 +390,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamNonExistingCreate() throws IOException {
+    void testNewOutputStreamNonExistingCreate() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.CREATE };
@@ -404,7 +403,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamNonExistingCreateDeleteOnClose() throws IOException {
+    void testNewOutputStreamNonExistingCreateDeleteOnClose() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.CREATE, StandardOpenOption.DELETE_ON_CLOSE };
@@ -419,7 +418,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamNonExistingCreateNew() throws IOException {
+    void testNewOutputStreamNonExistingCreateNew() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.CREATE_NEW };
@@ -432,7 +431,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamNonExistingCreateNewDeleteOnClose() throws IOException {
+    void testNewOutputStreamNonExistingCreateNewDeleteOnClose() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.CREATE_NEW, StandardOpenOption.DELETE_ON_CLOSE };
@@ -446,7 +445,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamDirectoryNoCreate() throws IOException {
+    void testNewOutputStreamDirectoryNoCreate() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.WRITE };
@@ -460,7 +459,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewOutputStreamDirectoryDeleteOnClose() throws IOException {
+    void testNewOutputStreamDirectoryDeleteOnClose() throws IOException {
         addDirectory("/foo");
 
         OpenOption[] options = { StandardOpenOption.DELETE_ON_CLOSE };
@@ -476,7 +475,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.newByteChannel
 
     @Test
-    public void testNewByteChannelRead() throws IOException {
+    void testNewByteChannelRead() throws IOException {
         addDirectory("/foo");
         Path bar = addFile("/foo/bar");
         setContents(bar, new byte[1024]);
@@ -491,7 +490,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewByteChannelReadNonExisting() {
+    void testNewByteChannelReadNonExisting() {
 
         // failure: file does not exist
 
@@ -505,7 +504,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewByteChannelWrite() throws IOException {
+    void testNewByteChannelWrite() throws IOException {
         addFile("/foo/bar");
 
         Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.WRITE);
@@ -516,7 +515,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testNewByteChannelWriteAppend() throws IOException {
+    void testNewByteChannelWriteAppend() throws IOException {
         Path bar = addFile("/foo/bar");
         setContents(bar, new byte[1024]);
 
@@ -530,44 +529,34 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.newDirectoryStream
 
     @Test
-    public void testNewDirectoryStream() throws IOException {
+    void testNewDirectoryStream() throws IOException {
 
-        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), AcceptAllFilter.INSTANCE)) {
+        try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), entry -> true)) {
             assertNotNull(stream);
             // don't do anything with the stream, there's a separate test for that
         }
     }
 
     @Test
-    public void testNewDirectoryStreamNotExisting() {
+    void testNewDirectoryStreamNotExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class,
-                () -> fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE));
+                () -> fileSystem.newDirectoryStream(createPath("/foo"), entry -> true));
         assertEquals("/foo", exception.getFile());
     }
 
     @Test
-    public void testGetDirectoryStreamNotDirectory() throws IOException {
+    void testGetDirectoryStreamNotDirectory() throws IOException {
         addFile("/foo");
 
         NotDirectoryException exception = assertThrows(NotDirectoryException.class,
-                () -> fileSystem.newDirectoryStream(createPath("/foo"), AcceptAllFilter.INSTANCE));
+                () -> fileSystem.newDirectoryStream(createPath("/foo"), entry -> true));
         assertEquals("/foo", exception.getFile());
-    }
-
-    private static final class AcceptAllFilter implements Filter<Path> {
-
-        private static final AcceptAllFilter INSTANCE = new AcceptAllFilter();
-
-        @Override
-        public boolean accept(Path entry) {
-            return true;
-        }
     }
 
     // SFTPFileSystem.createNewDirectory
 
     @Test
-    public void testCreateDirectory() throws IOException {
+    void testCreateDirectory() throws IOException {
         assertFalse(Files.exists(getPath("/foo")));
 
         fileSystem.createDirectory(createPath("/foo"));
@@ -576,7 +565,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCreateDirectoryAlreadyExists() throws IOException {
+    void testCreateDirectoryAlreadyExists() throws IOException {
         addDirectory("/foo/bar");
 
         FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class,
@@ -589,7 +578,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCreateDirectorySFTPFailure() {
+    void testCreateDirectorySFTPFailure() {
         // failure: parent does not exist
 
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.createDirectory(createPath("/foo/bar")));
@@ -603,7 +592,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.delete
 
     @Test
-    public void testDeleteNonExisting() {
+    void testDeleteNonExisting() {
 
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.delete(createPath("/foo")));
         assertEquals("/foo", exception.getFile());
@@ -612,7 +601,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testDeleteRoot() {
+    void testDeleteRoot() {
 
         FileSystemException exception = assertThrows(FileSystemException.class, () -> fileSystem.delete(createPath("/")));
         assertEquals("/", exception.getFile());
@@ -621,7 +610,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testDeleteFile() throws IOException {
+    void testDeleteFile() throws IOException {
         addFile("/foo/bar");
 
         fileSystem.delete(createPath("/foo/bar"));
@@ -631,7 +620,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testDeleteEmptyDir() throws IOException {
+    void testDeleteEmptyDir() throws IOException {
         addDirectory("/foo/bar");
 
         fileSystem.delete(createPath("/foo/bar"));
@@ -641,7 +630,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testDeleteSFTPFailure() throws IOException {
+    void testDeleteSFTPFailure() throws IOException {
         addDirectory("/foo/bar/baz");
 
         // failure: non-empty directory
@@ -658,7 +647,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.readSymbolicLink
 
     @Test
-    public void testReadSymbolicLinkToFile() throws IOException {
+    void testReadSymbolicLinkToFile() throws IOException {
         Path foo = addFile("/foo");
         addSymLink("/bar", foo);
 
@@ -667,7 +656,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadSymbolicLinkToDirectory() throws IOException {
+    void testReadSymbolicLinkToDirectory() throws IOException {
         Path foo = addDirectory("/foo");
         addSymLink("/bar", foo);
 
@@ -676,7 +665,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadSymbolicLinkToNonExistingTarget() throws IOException {
+    void testReadSymbolicLinkToNonExistingTarget() throws IOException {
         addSymLink("/bar", getPath("/foo"));
 
         SFTPPath link = fileSystem.readSymbolicLink(createPath("/bar"));
@@ -684,7 +673,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadSymbolicLinkNotExisting() {
+    void testReadSymbolicLinkNotExisting() {
 
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.readSymbolicLink(createPath("/foo")));
         assertEquals("/foo", exception.getFile());
@@ -693,7 +682,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadSymbolicLinkNoLinkButFile() throws IOException {
+    void testReadSymbolicLinkNoLinkButFile() throws IOException {
         addFile("/foo");
 
         FileSystemException exception = assertThrows(FileSystemException.class, () -> fileSystem.readSymbolicLink(createPath("/foo")));
@@ -703,7 +692,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadSymbolicLinkNoLinkButDirectory() throws IOException {
+    void testReadSymbolicLinkNoLinkButDirectory() throws IOException {
         addDirectory("/foo");
 
         FileSystemException exception = assertThrows(FileSystemException.class, () -> fileSystem.readSymbolicLink(createPath("/foo")));
@@ -715,7 +704,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.copy
 
     @Test
-    public void testCopySame() throws IOException {
+    void testCopySame() throws IOException {
         addDirectory("/home/foo");
         addDirectory("/home/foo/bar");
 
@@ -730,7 +719,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyNonExisting() throws IOException {
+    void testCopyNonExisting() throws IOException {
         addDirectory("/foo");
 
         CopyOption[] options = {};
@@ -743,7 +732,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopySFTPFailure() throws IOException {
+    void testCopySFTPFailure() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -762,7 +751,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyRoot() throws IOException {
+    void testCopyRoot() throws IOException {
         // copying a directory (including the root) will not copy its contents, so copying the root is allowed
         addDirectory("/foo");
 
@@ -775,7 +764,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceFile() throws IOException {
+    void testCopyReplaceFile() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -791,7 +780,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceFileAllowed() throws IOException {
+    void testCopyReplaceFileAllowed() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -805,7 +794,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceNonEmptyDir() throws IOException {
+    void testCopyReplaceNonEmptyDir() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -821,7 +810,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceNonEmptyDirAllowed() throws IOException {
+    void testCopyReplaceNonEmptyDirAllowed() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -838,7 +827,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceEmptyDir() throws IOException {
+    void testCopyReplaceEmptyDir() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -852,7 +841,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceEmptyDirAllowed() throws IOException {
+    void testCopyReplaceEmptyDirAllowed() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
 
@@ -864,7 +853,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyFile() throws IOException {
+    void testCopyFile() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -877,7 +866,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyFileMultipleConnections() throws IOException {
+    void testCopyFileMultipleConnections() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -890,7 +879,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyEmptyDir() throws IOException {
+    void testCopyEmptyDir() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
 
@@ -905,7 +894,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyNonEmptyDir() throws IOException {
+    void testCopyNonEmptyDir() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
         addFile("/baz/qux");
@@ -921,7 +910,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceFileDifferentFileSystems() throws IOException {
+    void testCopyReplaceFileDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -937,7 +926,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceFileAllowedDifferentFileSystems() throws IOException {
+    void testCopyReplaceFileAllowedDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -951,7 +940,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceNonEmptyDirDifferentFileSystems() throws IOException {
+    void testCopyReplaceNonEmptyDirDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -967,7 +956,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceNonEmptyDirAllowedDifferentFileSystems() throws IOException {
+    void testCopyReplaceNonEmptyDirAllowedDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -984,7 +973,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceEmptyDirDifferentFileSystems() throws IOException {
+    void testCopyReplaceEmptyDirDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -998,7 +987,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyReplaceEmptyDirAllowedDifferentFileSystems() throws IOException {
+    void testCopyReplaceEmptyDirAllowedDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
 
@@ -1010,7 +999,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyFileDifferentFileSystems() throws IOException {
+    void testCopyFileDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1023,7 +1012,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyEmptyDirDifferentFileSystems() throws IOException {
+    void testCopyEmptyDirDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
 
@@ -1038,7 +1027,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyNonEmptyDirDifferentFileSystems() throws IOException {
+    void testCopyNonEmptyDirDifferentFileSystems() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
         addFile("/baz/qux");
@@ -1054,7 +1043,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCopyWithAttributes() throws IOException {
+    void testCopyWithAttributes() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
         addFile("/baz/qux");
@@ -1068,7 +1057,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.move
 
     @Test
-    public void testMoveSame() throws IOException {
+    void testMoveSame() throws IOException {
         Path foo = addDirectory("/home/foo");
         addDirectory("/home/foo/bar");
         addSymLink("/baz", foo);
@@ -1088,7 +1077,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveNonExisting() throws IOException {
+    void testMoveNonExisting() throws IOException {
         addDirectory("/foo");
 
         CopyOption[] options = {};
@@ -1101,7 +1090,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveSFTPFailure() throws IOException {
+    void testMoveSFTPFailure() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -1120,7 +1109,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveEmptyRoot() {
+    void testMoveEmptyRoot() {
 
         CopyOption[] options = {};
         DirectoryNotEmptyException exception = assertThrows(DirectoryNotEmptyException.class,
@@ -1131,7 +1120,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveNonEmptyRoot() throws IOException {
+    void testMoveNonEmptyRoot() throws IOException {
         addDirectory("/foo");
 
         CopyOption[] options = {};
@@ -1144,7 +1133,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceFile() throws IOException {
+    void testMoveReplaceFile() throws IOException {
         addDirectory("/foo");
         addDirectory("/foo/bar");
         addFile("/baz");
@@ -1162,7 +1151,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceFileAllowed() throws IOException {
+    void testMoveReplaceFileAllowed() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -1176,7 +1165,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceEmptyDir() throws IOException {
+    void testMoveReplaceEmptyDir() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1192,7 +1181,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceEmptyDirAllowed() throws IOException {
+    void testMoveReplaceEmptyDirAllowed() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1204,7 +1193,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveFile() throws IOException {
+    void testMoveFile() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1217,7 +1206,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveEmptyDir() throws IOException {
+    void testMoveEmptyDir() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
 
@@ -1230,7 +1219,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveNonEmptyDir() throws IOException {
+    void testMoveNonEmptyDir() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
         addFile("/baz/qux");
@@ -1246,7 +1235,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveNonEmptyDirSameParent() throws IOException {
+    void testMoveNonEmptyDirSameParent() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
 
@@ -1261,7 +1250,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceFileDifferentFileSystem() throws IOException {
+    void testMoveReplaceFileDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addDirectory("/foo/bar");
         addFile("/baz");
@@ -1278,7 +1267,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceFileAllowedDifferentFileSystem() throws IOException {
+    void testMoveReplaceFileAllowedDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addFile("/foo/bar");
         addFile("/baz");
@@ -1292,7 +1281,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveReplaceEmptyDirDifferentFileSystem() throws IOException {
+    void testMoveReplaceEmptyDirDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1306,7 +1295,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertTrue(Files.isRegularFile(getPath("/baz")));
     }
 
-    public void testMoveReplaceEmptyDirAllowedDifferentFileSystem() throws IOException {
+    void testMoveReplaceEmptyDirAllowedDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1318,7 +1307,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveFileDifferentFileSystem() throws IOException {
+    void testMoveFileDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addFile("/baz");
 
@@ -1331,7 +1320,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveEmptyDirDifferentFileSystem() throws IOException {
+    void testMoveEmptyDirDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
 
@@ -1344,7 +1333,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testMoveNonEmptyDirDifferentFileSystem() throws IOException {
+    void testMoveNonEmptyDirDifferentFileSystem() throws IOException {
         addDirectory("/foo");
         addDirectory("/baz");
         addFile("/baz/qux");
@@ -1369,7 +1358,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.isSameFile
 
     @Test
-    public void testIsSameFileEquals() throws IOException {
+    void testIsSameFileEquals() throws IOException {
 
         assertTrue(fileSystem.isSameFile(createPath("/"), createPath("/")));
         assertTrue(fileSystem.isSameFile(createPath("/foo"), createPath("/foo")));
@@ -1384,7 +1373,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testIsSameFileExisting() throws IOException {
+    void testIsSameFileExisting() throws IOException {
         Path bar = addFile("/home/foo/bar");
         addSymLink("/bar", bar);
 
@@ -1402,13 +1391,13 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testIsSameFileFirstNonExisting() {
+    void testIsSameFileFirstNonExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.isSameFile(createPath("/foo"), createPath("/")));
         assertEquals("/foo", exception.getFile());
     }
 
     @Test
-    public void testIsSameFileSecondNonExisting() {
+    void testIsSameFileSecondNonExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.isSameFile(createPath("/"), createPath("/foo")));
         assertEquals("/foo", exception.getFile());
     }
@@ -1416,7 +1405,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.isHidden
 
     @Test
-    public void testIsHidden() throws IOException {
+    void testIsHidden() throws IOException {
         addDirectory("/foo");
         addDirectory("/.foo");
         addFile("/foo/bar");
@@ -1429,7 +1418,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testIsHiddenNonExisting() {
+    void testIsHiddenNonExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.isHidden(createPath("/foo")));
         assertEquals("/foo", exception.getFile());
     }
@@ -1437,27 +1426,27 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.checkAccess
 
     @Test
-    public void testCheckAccessNonExisting() {
+    void testCheckAccessNonExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.checkAccess(createPath("/foo/bar")));
         assertEquals("/foo/bar", exception.getFile());
     }
 
     @Test
-    public void testCheckAccessNoModes() throws IOException {
+    void testCheckAccessNoModes() throws IOException {
         addDirectory("/foo/bar");
 
         fileSystem.checkAccess(createPath("/foo/bar"));
     }
 
     @Test
-    public void testCheckAccessOnlyRead() throws IOException {
+    void testCheckAccessOnlyRead() throws IOException {
         addDirectory("/foo/bar");
 
         fileSystem.checkAccess(createPath("/foo/bar"), AccessMode.READ);
     }
 
     @Test
-    public void testCheckAccessOnlyWriteNotReadOnly() throws IOException {
+    void testCheckAccessOnlyWriteNotReadOnly() throws IOException {
         addDirectory("/foo/bar");
 
         fileSystem.checkAccess(createPath("/foo/bar"), AccessMode.WRITE);
@@ -1465,7 +1454,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
     @Disabled("On Windows, the permissions are not reported correctly, but always as rw-rw-rw-")
     @Test
-    public void testCheckAccessOnlyWriteReadOnly() throws IOException {
+    void testCheckAccessOnlyWriteReadOnly() throws IOException {
         Path bar = addDirectory("/foo/bar");
         bar.toFile().setReadOnly();
 
@@ -1475,7 +1464,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testCheckAccessOnlyExecute() throws IOException {
+    void testCheckAccessOnlyExecute() throws IOException {
         Path bar = addFile("/foo/bar");
         bar.toFile().setReadOnly();
 
@@ -1487,7 +1476,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.readAttributes (SFTPFileAttributes variant)
 
     @Test
-    public void testReadAttributesFileFollowLinks() throws IOException {
+    void testReadAttributesFileFollowLinks() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
@@ -1504,7 +1493,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesFileNoFollowLinks() throws IOException {
+    void testReadAttributesFileNoFollowLinks() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
@@ -1521,7 +1510,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesDirectoryFollowLinks() throws IOException {
+    void testReadAttributesDirectoryFollowLinks() throws IOException {
         Path foo = addDirectory("/foo");
 
         PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/foo"));
@@ -1537,7 +1526,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesDirectoryNoFollowLinks() throws IOException {
+    void testReadAttributesDirectoryNoFollowLinks() throws IOException {
         Path foo = addDirectory("/foo");
 
         PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/foo"), LinkOption.NOFOLLOW_LINKS);
@@ -1553,7 +1542,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesSymLinkToFileFollowLinks() throws IOException {
+    void testReadAttributesSymLinkToFileFollowLinks() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
         Path bar = addSymLink("/bar", foo);
@@ -1575,7 +1564,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesSymLinkToFileNoFollowLinks() throws IOException {
+    void testReadAttributesSymLinkToFileNoFollowLinks() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
         Path bar = addSymLink("/bar", foo);
@@ -1597,7 +1586,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesSymLinkToDirectoryFollowLinks() throws IOException {
+    void testReadAttributesSymLinkToDirectoryFollowLinks() throws IOException {
         Path foo = addDirectory("/foo");
         addSymLink("/bar", foo);
 
@@ -1617,7 +1606,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesSymLinkToDirectoryNoFollowLinks() throws IOException {
+    void testReadAttributesSymLinkToDirectoryNoFollowLinks() throws IOException {
         Path foo = addDirectory("/foo");
         Path bar = addSymLink("/bar", foo);
 
@@ -1637,7 +1626,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesNonExisting() {
+    void testReadAttributesNonExisting() {
         NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> fileSystem.readAttributes(createPath("/foo")));
         assertEquals("/foo", exception.getFile());
     }
@@ -1645,7 +1634,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.readAttributes (map variant)
 
     @Test
-    public void testReadAttributesMapNoTypeLastModifiedTime() throws IOException {
+    void testReadAttributesMapNoTypeLastModifiedTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "lastModifiedTime");
@@ -1654,7 +1643,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeLastAccessTime() throws IOException {
+    void testReadAttributesMapNoTypeLastAccessTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "lastAccessTime");
@@ -1663,7 +1652,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeCreateTime() throws IOException {
+    void testReadAttributesMapNoTypeCreateTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "creationTime");
@@ -1672,7 +1661,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeBasicSize() throws IOException {
+    void testReadAttributesMapNoTypeBasicSize() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
@@ -1682,7 +1671,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeIsRegularFile() throws IOException {
+    void testReadAttributesMapNoTypeIsRegularFile() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isRegularFile");
@@ -1691,7 +1680,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeIsDirectory() throws IOException {
+    void testReadAttributesMapNoTypeIsDirectory() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isDirectory");
@@ -1700,7 +1689,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeIsSymbolicLink() throws IOException {
+    void testReadAttributesMapNoTypeIsSymbolicLink() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isSymbolicLink");
@@ -1709,7 +1698,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeIsOther() throws IOException {
+    void testReadAttributesMapNoTypeIsOther() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isOther");
@@ -1718,7 +1707,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeFileKey() throws IOException {
+    void testReadAttributesMapNoTypeFileKey() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "fileKey");
@@ -1727,7 +1716,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeMultiple() throws IOException {
+    void testReadAttributesMapNoTypeMultiple() throws IOException {
         Path foo = addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "size,isDirectory");
@@ -1738,7 +1727,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapNoTypeAll() throws IOException {
+    void testReadAttributesMapNoTypeAll() throws IOException {
         Path foo = addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "*");
@@ -1763,7 +1752,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicLastModifiedTime() throws IOException {
+    void testReadAttributesMapBasicLastModifiedTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:lastModifiedTime");
@@ -1772,7 +1761,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicLastAccessTime() throws IOException {
+    void testReadAttributesMapBasicLastAccessTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:lastAccessTime");
@@ -1781,7 +1770,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicCreateTime() throws IOException {
+    void testReadAttributesMapBasicCreateTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:creationTime");
@@ -1790,7 +1779,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicSize() throws IOException {
+    void testReadAttributesMapBasicSize() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
@@ -1800,7 +1789,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicIsRegularFile() throws IOException {
+    void testReadAttributesMapBasicIsRegularFile() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isRegularFile");
@@ -1809,7 +1798,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicIsDirectory() throws IOException {
+    void testReadAttributesMapBasicIsDirectory() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isDirectory");
@@ -1818,7 +1807,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicIsSymbolicLink() throws IOException {
+    void testReadAttributesMapBasicIsSymbolicLink() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isSymbolicLink");
@@ -1827,7 +1816,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicIsOther() throws IOException {
+    void testReadAttributesMapBasicIsOther() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isOther");
@@ -1836,7 +1825,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicFileKey() throws IOException {
+    void testReadAttributesMapBasicFileKey() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:fileKey");
@@ -1845,7 +1834,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicMultiple() throws IOException {
+    void testReadAttributesMapBasicMultiple() throws IOException {
         Path foo = addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:size,isDirectory");
@@ -1856,7 +1845,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapBasicAll() throws IOException {
+    void testReadAttributesMapBasicAll() throws IOException {
         Path foo = addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:*");
@@ -1881,7 +1870,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixLastModifiedTime() throws IOException {
+    void testReadAttributesMapPosixLastModifiedTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:lastModifiedTime");
@@ -1890,7 +1879,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixLastAccessTime() throws IOException {
+    void testReadAttributesMapPosixLastAccessTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:lastAccessTime");
@@ -1899,7 +1888,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixCreateTime() throws IOException {
+    void testReadAttributesMapPosixCreateTime() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:creationTime");
@@ -1908,7 +1897,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixSize() throws IOException {
+    void testReadAttributesMapPosixSize() throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
@@ -1918,7 +1907,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixIsRegularFile() throws IOException {
+    void testReadAttributesMapPosixIsRegularFile() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isRegularFile");
@@ -1927,7 +1916,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixIsDirectory() throws IOException {
+    void testReadAttributesMapPosixIsDirectory() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isDirectory");
@@ -1936,7 +1925,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixIsSymbolicLink() throws IOException {
+    void testReadAttributesMapPosixIsSymbolicLink() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isSymbolicLink");
@@ -1945,7 +1934,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixIsOther() throws IOException {
+    void testReadAttributesMapPosixIsOther() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isOther");
@@ -1954,7 +1943,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixFileKey() throws IOException {
+    void testReadAttributesMapPosixFileKey() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:fileKey");
@@ -1963,7 +1952,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapOwnerOwner() throws IOException {
+    void testReadAttributesMapOwnerOwner() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "owner:owner");
@@ -1972,7 +1961,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapOwnerAll() throws IOException {
+    void testReadAttributesMapOwnerAll() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "owner:*");
@@ -1985,7 +1974,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixOwner() throws IOException {
+    void testReadAttributesMapPosixOwner() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:owner");
@@ -1994,7 +1983,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixGroup() throws IOException {
+    void testReadAttributesMapPosixGroup() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:group");
@@ -2003,7 +1992,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixPermissions() throws IOException {
+    void testReadAttributesMapPosixPermissions() throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:permissions");
@@ -2012,7 +2001,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixMultiple() throws IOException {
+    void testReadAttributesMapPosixMultiple() throws IOException {
         Path foo = addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:size,owner,group");
@@ -2023,7 +2012,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapPosixAll() throws IOException {
+    void testReadAttributesMapPosixAll() throws IOException {
         Path foo = addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:*");
@@ -2054,7 +2043,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapUnsupportedAttribute() throws IOException {
+    void testReadAttributesMapUnsupportedAttribute() throws IOException {
         addDirectory("/foo");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -2063,7 +2052,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadAttributesMapUnsupportedType() throws IOException {
+    void testReadAttributesMapUnsupportedType() throws IOException {
         addDirectory("/foo");
 
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
@@ -2076,7 +2065,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // the success flow cannot be properly tested on Windows
 
     @Test
-    public void testSetOwnerNonExisting() {
+    void testSetOwnerNonExisting() {
         FileSystemException exception = assertThrows(FileSystemException.class,
                 () -> fileSystem.setOwner(createPath("/foo/bar"), new SimpleUserPrincipal("1")));
         assertEquals("/foo/bar", exception.getFile());
@@ -2085,7 +2074,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSetOwnerNonNumeric() throws IOException {
+    void testSetOwnerNonNumeric() throws IOException {
         addFile("/foo/bar");
 
         IOException exception = assertThrows(IOException.class, () -> fileSystem.setOwner(createPath("/foo/bar"), new SimpleUserPrincipal("test")));
@@ -2099,7 +2088,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // the success flow cannot be properly tested on Windows
 
     @Test
-    public void testSetGroupNonExisting() {
+    void testSetGroupNonExisting() {
         FileSystemException exception = assertThrows(FileSystemException.class,
                 () -> fileSystem.setGroup(createPath("/foo/bar"), new SimpleGroupPrincipal("1")));
         assertEquals("/foo/bar", exception.getFile());
@@ -2108,7 +2097,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSetGroupNonNumeric() throws IOException {
+    void testSetGroupNonNumeric() throws IOException {
         addFile("/foo/bar");
 
         IOException exception = assertThrows(IOException.class, () -> fileSystem.setGroup(createPath("/foo/bar"), new SimpleGroupPrincipal("test")));
@@ -2122,7 +2111,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // the success flow cannot be properly tested on Windows
 
     @Test
-    public void testSetPermissionsNonExisting() {
+    void testSetPermissionsNonExisting() {
         FileSystemException exception = assertThrows(FileSystemException.class,
                 () -> fileSystem.setPermissions(createPath("/foo/bar"), PosixFilePermissions.fromString("r--r--r--")));
         assertEquals("/foo/bar", exception.getFile());
@@ -2133,7 +2122,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.setLastModifiedTime
 
     @Test
-    public void testSetLastModifiedTimeExisting() throws IOException {
+    void testSetLastModifiedTimeExisting() throws IOException {
         addFile("/foo/bar");
 
         SFTPPath path = createPath("/foo/bar");
@@ -2144,7 +2133,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSetLastModifiedTimeNonExisting() {
+    void testSetLastModifiedTimeNonExisting() {
         FileSystemException exception = assertThrows(FileSystemException.class,
                 () -> fileSystem.setLastModifiedTime(createPath("/foo/bar"), FileTime.from(123456789L, TimeUnit.SECONDS), false));
         assertEquals("/foo/bar", exception.getFile());
@@ -2157,7 +2146,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.setAttribute
 
     @Test
-    public void testSetAttributeLastModifiedTime() throws IOException {
+    void testSetAttributeLastModifiedTime() throws IOException {
         Path foo = addDirectory("/foo");
 
         SFTPPath fooPath = createPath("/foo");
@@ -2178,7 +2167,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSetAttributeUnsupportedAttribute() throws IOException {
+    void testSetAttributeUnsupportedAttribute() throws IOException {
         addDirectory("/foo");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
@@ -2187,7 +2176,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSetAttributeUnsupportedType() throws IOException {
+    void testSetAttributeUnsupportedType() throws IOException {
         addDirectory("/foo");
 
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
@@ -2196,7 +2185,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSetAttributeInvalidValueType() throws IOException {
+    void testSetAttributeInvalidValueType() throws IOException {
         addDirectory("/foo");
 
         assertThrows(ClassCastException.class, () -> fileSystem.setAttribute(createPath("/foo"), "basic:lastModifiedTime", 1));
@@ -2205,7 +2194,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.getTotalSpace
 
     @Test
-    public void testGetTotalSpace() throws IOException {
+    void testGetTotalSpace() throws IOException {
         // SshServer does not support statVFS
         assertEquals(Long.MAX_VALUE, fileSystem.getTotalSpace(createPath("/")));
     }
@@ -2213,7 +2202,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.getUsableSpace
 
     @Test
-    public void testGetUsableSpace() throws IOException {
+    void testGetUsableSpace() throws IOException {
         // SshServer does not support statVFS
         assertEquals(Long.MAX_VALUE, fileSystem.getUsableSpace(createPath("/")));
     }
@@ -2221,7 +2210,7 @@ public class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     // SFTPFileSystem.getUnallocatedSpace
 
     @Test
-    public void testGetUnallocatedSpace() throws IOException {
+    void testGetUnallocatedSpace() throws IOException {
         // SshServer does not support statVFS
         assertEquals(Long.MAX_VALUE, fileSystem.getUnallocatedSpace(createPath("/")));
     }

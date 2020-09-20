@@ -23,11 +23,11 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPFileSystemOutputStreamTest extends AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+class SFTPFileSystemOutputStreamTest extends AbstractSFTPFileSystemTest {
 
     @Test
-    public void testWriteSingle() throws IOException {
+    void testWriteSingle() throws IOException {
 
         try (OutputStream output = fileSystem.newOutputStream(createPath("/foo"))) {
             output.write('H');
@@ -41,7 +41,7 @@ public class SFTPFileSystemOutputStreamTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testWriteBulk() throws IOException {
+    void testWriteBulk() throws IOException {
 
         try (OutputStream output = fileSystem.newOutputStream(createPath("/foo"))) {
             output.write("Hello".getBytes());

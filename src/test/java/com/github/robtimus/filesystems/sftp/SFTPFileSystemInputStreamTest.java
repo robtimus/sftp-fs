@@ -26,11 +26,11 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
 
     @Test
-    public void testReadSingle() throws IOException {
+    void testReadSingle() throws IOException {
         final String content = "Hello World";
 
         Path file = addFile("/foo");
@@ -53,7 +53,7 @@ public class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testReadBulk() throws IOException {
+    void testReadBulk() throws IOException {
         final String content = "Hello World";
 
         Path file = addFile("/foo");
@@ -71,7 +71,7 @@ public class SFTPFileSystemInputStreamTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testSkip() throws IOException {
+    void testSkip() throws IOException {
         final String content = "Hello World";
 
         Path file = addFile("/foo");

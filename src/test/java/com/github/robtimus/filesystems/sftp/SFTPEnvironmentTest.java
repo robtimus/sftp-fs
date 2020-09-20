@@ -19,6 +19,7 @@ package com.github.robtimus.filesystems.sftp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -34,7 +35,11 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.HostKey;
@@ -49,11 +54,76 @@ import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SocketFactory;
 import com.jcraft.jsch.UserInfo;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class SFTPEnvironmentTest {
+@SuppressWarnings("nls")
+class SFTPEnvironmentTest {
+
+    private Method findMethod(String methodName, Class<?> propertyType) {
+        for (Method method : SFTPEnvironment.class.getMethods()) {
+            if (method.getName().equals(methodName)) {
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                if (parameterTypes.length == 1) {
+                    if (parameterTypes[0].isAssignableFrom(propertyType)) {
+                        return method;
+                    }
+                    if (parameterTypes[0] == boolean.class && propertyType == Boolean.class) {
+                        return method;
+                    }
+                    if (parameterTypes[0] == int.class && propertyType == Integer.class) {
+                        return method;
+                    }
+                    if (parameterTypes[0] == long.class && propertyType == Long.class) {
+                        return method;
+                    }
+                }
+            }
+        }
+        throw new AssertionError("Could not find method " + methodName);
+    }
+
+    static Stream<Arguments> findSetters() {
+        Arguments[] arguments = {
+                arguments("withUsername", "username", UUID.randomUUID().toString()),
+                arguments("withConnectTimeout", "connectTimeout", 1000),
+                arguments("withProxy", "proxy", new ProxyHTTP("localhost")),
+                arguments("withUserInfo", "userInfo", new SimpleUserInfo(UUID.randomUUID().toString().toCharArray())),
+                arguments("withPassword", "password", UUID.randomUUID().toString().toCharArray()),
+                arguments("withConfig", "config", System.getProperties()),
+                arguments("withSocketFactory", "socketFactory", new TestSocketFactory()),
+                arguments("withTimeout", "timeOut", 1000),
+                arguments("withClientVersion", "clientVersion", "SSH-2"),
+                arguments("withHostKeyAlias", "hostKeyAlias", "alias"),
+                arguments("withServerAliveInterval", "serverAliveInterval", 500),
+                arguments("withServerAliveCountMax", "serverAliveCountMax", 5),
+                arguments("withIdentityRepository", "identityRepository", new TestIdentityRepository()),
+                arguments("withIdentities", "identities", Collections.singletonList(IdentityTest.fromFiles())),
+                arguments("withHostKeyRepository", "hostKeyRepository", new TestHostKeyRepository()),
+                arguments("withKnownHosts", "knownHosts", new File("known_hosts")),
+                arguments("withAgentForwarding", "agentForwarding", false),
+                arguments("withFilenameEncoding", "filenameEncoding", "UTF-8"),
+                arguments("withDefaultDirectory", "defaultDir", "/"),
+                arguments("withClientConnectionCount", "clientConnectionCount", 5),
+                arguments("withClientConnectionWaitTimeout", "clientConnectionWaitTimeout", 1000L),
+                arguments("withFileSystemExceptionFactory", "fileSystemExceptionFactory", DefaultFileSystemExceptionFactory.INSTANCE),
+        };
+        return Arrays.stream(arguments);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("findSetters")
+    void testSetter(String methodName, String propertyName, Object propertyValue) throws ReflectiveOperationException {
+        Method setter = findMethod(methodName, propertyValue.getClass());
+
+        SFTPEnvironment env = new SFTPEnvironment();
+
+        assertEquals(Collections.emptyMap(), env);
+
+        setter.invoke(env, propertyValue);
+
+        assertEquals(Collections.singletonMap(propertyName, propertyValue), env);
+    }
 
     @Test
-    public void testWithConfig() {
+    void testWithConfig() {
         SFTPEnvironment env = new SFTPEnvironment();
 
         assertEquals(Collections.emptyMap(), env);
@@ -74,7 +144,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testWithIdentity() {
+    void testWithIdentity() {
         SFTPEnvironment env = new SFTPEnvironment();
 
         assertEquals(Collections.emptyMap(), env);
@@ -87,7 +157,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testWithIdentities() {
+    void testWithIdentities() {
         SFTPEnvironment env = new SFTPEnvironment();
 
         assertEquals(Collections.emptyMap(), env);
@@ -101,7 +171,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJSchEmpty() throws IOException {
+    void testInitializeJSchEmpty() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         JSch jsch = mock(JSch.class);
@@ -111,7 +181,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJSchFull() throws IOException, JSchException {
+    void testInitializeJSchFull() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -126,7 +196,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJSchWithNulls() throws IOException {
+    void testInitializeJSchWithNulls() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeWithNulls(env);
 
@@ -139,7 +209,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJSchWithNullIdentity() {
+    void testInitializeJSchWithNullIdentity() {
         final SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
         env.put("identities", Collections.singleton(null));
@@ -150,7 +220,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeJSchWithInvalidIdentity() {
+    void testInitializeJSchWithInvalidIdentity() {
         final SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
         env.put("identities", Collections.singleton("foobar"));
@@ -161,7 +231,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeSessionEmpty() throws IOException {
+    void testInitializeSessionEmpty() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         Session session = mock(Session.class);
@@ -171,7 +241,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeSessionFull() throws IOException, JSchException {
+    void testInitializeSessionFull() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -192,7 +262,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeSessionWithNulls() throws IOException {
+    void testInitializeSessionWithNulls() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeWithNulls(env);
 
@@ -209,7 +279,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testConnectSessionEmpty() throws IOException, JSchException {
+    void testConnectSessionEmpty() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         Session session = mock(Session.class);
@@ -221,7 +291,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testConnectSessionFull() throws IOException, JSchException {
+    void testConnectSessionFull() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -234,7 +304,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeChannelPreConnectEmpty() throws IOException {
+    void testInitializeChannelPreConnectEmpty() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         ChannelSftp channel = mock(ChannelSftp.class);
@@ -245,7 +315,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeChannelPreConnectFull() throws IOException, SftpException {
+    void testInitializeChannelPreConnectFull() throws IOException, SftpException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -259,7 +329,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeChannelPreConnectWithNulls() throws IOException, SftpException {
+    void testInitializeChannelPreConnectWithNulls() throws IOException, SftpException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeWithNulls(env);
 
@@ -272,7 +342,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testConnectChannelEmpty() throws IOException, JSchException {
+    void testConnectChannelEmpty() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         ChannelSftp channel = mock(ChannelSftp.class);
@@ -284,7 +354,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testConnectChannelFull() throws IOException, JSchException {
+    void testConnectChannelFull() throws IOException, JSchException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -297,7 +367,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeChannelPostConnectEmpty() throws IOException {
+    void testInitializeChannelPostConnectEmpty() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
 
         ChannelSftp channel = mock(ChannelSftp.class);
@@ -308,7 +378,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeChannelPostConnectFull() throws IOException, SftpException {
+    void testInitializeChannelPostConnectFull() throws IOException, SftpException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -321,7 +391,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testInitializeChannelPostConnectWithNulls() throws IOException {
+    void testInitializeChannelPostConnectWithNulls() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeWithNulls(env);
 
@@ -333,12 +403,12 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testSessionHostKeyRepository() throws JSchException, IOException, ReflectiveOperationException {
+    void testSessionHostKeyRepository() throws JSchException, IOException, ReflectiveOperationException {
         testSessionPropertyInheritedFromJSch("getHostKeyRepository", "hostKeyRepository");
     }
 
     @Test
-    public void testSessionIdentityRepository() throws JSchException, IOException, ReflectiveOperationException {
+    void testSessionIdentityRepository() throws JSchException, IOException, ReflectiveOperationException {
         testSessionPropertyInheritedFromJSch("getIdentityRepository", "identityRepository");
     }
 
@@ -363,7 +433,7 @@ public class SFTPEnvironmentTest {
     }
 
     @Test
-    public void testWithClientConnectionWaitTimeoutWithUnit() {
+    void testWithClientConnectionWaitTimeoutWithUnit() {
         SFTPEnvironment env = new SFTPEnvironment();
 
         assertEquals(Collections.emptyMap(), env);

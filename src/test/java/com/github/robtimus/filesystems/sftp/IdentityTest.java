@@ -37,8 +37,8 @@ import org.junit.jupiter.api.Test;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public class IdentityTest extends AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+class IdentityTest extends AbstractSFTPFileSystemTest {
 
     private static final File BASE_DIR = new File("src/test/resources", IdentityTest.class.getPackage().getName().replace('.', '/'));
 
@@ -90,7 +90,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesOnlyPrivateKeyFile() throws JSchException {
+    void testFromFilesOnlyPrivateKeyFile() throws JSchException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE);
 
         JSch jsch = spy(new JSch());
@@ -101,7 +101,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileAndNullStringPassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileAndNullStringPassphrase() throws JSchException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, (String) null);
 
         JSch jsch = spy(new JSch());
@@ -112,7 +112,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileAndNonNullStringPassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileAndNonNullStringPassphrase() throws JSchException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
 
         JSch jsch = spy(new JSch());
@@ -123,7 +123,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileAndNullBytePassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileAndNullBytePassphrase() throws JSchException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, (byte[]) null);
 
         JSch jsch = spy(new JSch());
@@ -134,7 +134,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileAndNonNullBytePassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileAndNonNullBytePassphrase() throws JSchException {
         byte[] passphrase = PASSPHRASE.clone();
 
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, passphrase);
@@ -147,7 +147,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileNullPublicKeyFileAndNullBytePassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileNullPublicKeyFileAndNullBytePassphrase() throws JSchException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, null, null);
 
         JSch jsch = spy(new JSch());
@@ -158,7 +158,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileNullPublicKeyFileAndNonNullBytePassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileNullPublicKeyFileAndNonNullBytePassphrase() throws JSchException {
         byte[] passphrase = PASSPHRASE.clone();
 
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, null, passphrase);
@@ -171,7 +171,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileNonNullPublicKeyFileAndNullBytePassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileNonNullPublicKeyFileAndNullBytePassphrase() throws JSchException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, null);
 
         JSch jsch = spy(new JSch());
@@ -182,7 +182,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromFilesPrivateKeyFileNonNullPublicKeyFileAndNonNullBytePassphrase() throws JSchException {
+    void testFromFilesPrivateKeyFileNonNullPublicKeyFileAndNonNullBytePassphrase() throws JSchException {
         byte[] passphrase = PASSPHRASE.clone();
 
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, passphrase);
@@ -195,7 +195,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromDataPrivateKeyNullPublicKeyAndNullBytePassphrase() throws JSchException {
+    void testFromDataPrivateKeyNullPublicKeyAndNullBytePassphrase() throws JSchException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
 
@@ -211,7 +211,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromDataPrivateKeyNullPublicKeyAndNonNullBytePassphrase() throws JSchException {
+    void testFromDataPrivateKeyNullPublicKeyAndNonNullBytePassphrase() throws JSchException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
         byte[] passphrase = PASSPHRASE.clone();
@@ -228,7 +228,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromDataPrivateKeyNonNullPublicKeyAndNullBytePassphrase() throws JSchException {
+    void testFromDataPrivateKeyNonNullPublicKeyAndNullBytePassphrase() throws JSchException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
         byte[] publicKey = PUBLIC_KEY.clone();
@@ -246,7 +246,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testFromDataPrivateKeyNonNullPublicKeyAndNonNullBytePassphrase() throws JSchException {
+    void testFromDataPrivateKeyNonNullPublicKeyAndNonNullBytePassphrase() throws JSchException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
         byte[] publicKey = PUBLIC_KEY.clone();
@@ -265,42 +265,42 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromFilesOnlyPrivateKeyFile() throws IOException {
+    void testLoginFromFilesOnlyPrivateKeyFile() throws IOException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE);
 
         testLoginSuccess(identity);
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileAndNullStringPassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileAndNullStringPassphrase() throws IOException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, (String) null);
 
         testLoginSuccess(identity);
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileAndNonNullStringPassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileAndNonNullStringPassphrase() throws IOException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
 
         testLoginSuccess(identity);
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileAndNullBytePassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileAndNullBytePassphrase() throws IOException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, (byte[]) null);
 
         testLoginSuccess(identity);
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileNullPublicKeyFileAndNullBytePassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileNullPublicKeyFileAndNullBytePassphrase() throws IOException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, null, null);
 
         testLoginSuccess(identity);
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileNullPublicKeyFileAndNonNullBytePassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileNullPublicKeyFileAndNonNullBytePassphrase() throws IOException {
         byte[] passphrase = PASSPHRASE.clone();
 
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, null, passphrase);
@@ -309,14 +309,14 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileNonNullPublicKeyFileAndNullBytePassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileNonNullPublicKeyFileAndNullBytePassphrase() throws IOException {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, PUBLIC_KEY_FILE_NOPASS, null);
 
         testLoginSuccess(identity);
     }
 
     @Test
-    public void testLoginFromFilesPrivateKeyFileNonNullPublicKeyFileAndNonNullBytePassphrase() throws IOException {
+    void testLoginFromFilesPrivateKeyFileNonNullPublicKeyFileAndNonNullBytePassphrase() throws IOException {
         byte[] passphrase = PASSPHRASE.clone();
 
         Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, PUBLIC_KEY_FILE_NOPASS, passphrase);
@@ -325,14 +325,14 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromFilesWrongPassphrase() {
+    void testLoginFromFilesWrongPassphrase() {
         Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PUBLIC_KEY_FILE, null);
 
         testLoginFailure(identity);
     }
 
     @Test
-    public void testLoginFromDataNullPublicKeyAndNullPassphrase() throws IOException {
+    void testLoginFromDataNullPublicKeyAndNullPassphrase() throws IOException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY_NOPASS.clone();
 
@@ -342,7 +342,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromDataNullPublicKeyAndNonNullPassphrase() throws IOException {
+    void testLoginFromDataNullPublicKeyAndNonNullPassphrase() throws IOException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
         byte[] passphrase = PASSPHRASE.clone();
@@ -353,7 +353,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromDataNonNullPublicKeyAndNullPassphrase() throws IOException {
+    void testLoginFromDataNonNullPublicKeyAndNullPassphrase() throws IOException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY_NOPASS.clone();
         byte[] publicKey = PUBLIC_KEY_NOPASS.clone();
@@ -364,7 +364,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromDataNonNullPublicKeyAndNonNullPassphrase() throws IOException {
+    void testLoginFromDataNonNullPublicKeyAndNonNullPassphrase() throws IOException {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
         byte[] publicKey = PUBLIC_KEY.clone();
@@ -376,7 +376,7 @@ public class IdentityTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    public void testLoginFromDataWrongPassphrase() {
+    void testLoginFromDataWrongPassphrase() {
         String name = "test";
         byte[] privateKey = PRIVATE_KEY.clone();
         byte[] publicKey = PUBLIC_KEY.clone();

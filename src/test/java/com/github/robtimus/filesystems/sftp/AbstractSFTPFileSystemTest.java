@@ -52,8 +52,6 @@ import java.util.Map;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.auth.password.PasswordAuthenticator;
-import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
 import org.junit.jupiter.api.AfterAll;
@@ -63,8 +61,8 @@ import org.junit.jupiter.api.BeforeEach;
 import com.github.robtimus.filesystems.sftp.server.FixedSftpSubsystem;
 import com.jcraft.jsch.SftpException;
 
-@SuppressWarnings({ "nls", "javadoc" })
-public abstract class AbstractSFTPFileSystemTest {
+@SuppressWarnings("nls")
+abstract class AbstractSFTPFileSystemTest {
 
     private static final String USERNAME = "TEST_USER";
     private static final String PASSWORD = "TEST_PASSWORD";
@@ -107,7 +105,7 @@ public abstract class AbstractSFTPFileSystemTest {
     }
 
     @BeforeAll
-    public static void setupClass() throws NoSuchAlgorithmException, IOException {
+    static void setupClass() throws NoSuchAlgorithmException, IOException {
         setupClass(new FixedSftpSubsystem.Factory());
     }
 
@@ -120,18 +118,10 @@ public abstract class AbstractSFTPFileSystemTest {
         sshServer = SshServer.setUpDefaultServer();
         sshServer.setPort(port);
         sshServer.setKeyPairProvider(new MappedKeyPairProvider(keyPair));
-        sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
-            @Override
-            public boolean authenticate(String username, String password, ServerSession session) {
-                return USERNAME.equals(username) && PASSWORD.equals(password);
-            }
-        });
-        sshServer.setPublickeyAuthenticator(new PublickeyAuthenticator() {
-            @Override
-            public boolean authenticate(String username, PublicKey key, ServerSession session) {
-                return USERNAME.equals(username) && (PUBLIC_KEY.equals(key) || PUBLIC_KEY_NOPASS.equals(key));
-            }
-        });
+        sshServer.setPasswordAuthenticator((String username, String password, ServerSession session) ->
+                USERNAME.equals(username) && PASSWORD.equals(password));
+        sshServer.setPublickeyAuthenticator((String username, PublicKey key, ServerSession session) ->
+                USERNAME.equals(username) && (PUBLIC_KEY.equals(key) || PUBLIC_KEY_NOPASS.equals(key)));
         sshServer.setSubsystemFactories(Arrays.asList(subSystemFactory));
 
         rootPath = Files.createTempDirectory("sftp-fs");
@@ -156,7 +146,7 @@ public abstract class AbstractSFTPFileSystemTest {
     }
 
     @AfterAll
-    public static void cleanupClass() throws IOException {
+    static void cleanupClass() throws IOException {
         Files.deleteIfExists(defaultDir);
         Files.deleteIfExists(rootPath);
 
@@ -187,14 +177,14 @@ public abstract class AbstractSFTPFileSystemTest {
     }
 
     @BeforeEach
-    public void setup() throws IOException {
+    void setup() throws IOException {
         Files.createDirectories(defaultDir);
 
         exceptionFactory.delegate = spy(DefaultFileSystemExceptionFactory.INSTANCE);
     }
 
     @AfterEach
-    public void cleanup() throws IOException {
+    void cleanup() throws IOException {
         exceptionFactory.delegate = null;
 
         purgePath(rootPath);

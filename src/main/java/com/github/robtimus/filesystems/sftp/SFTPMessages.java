@@ -31,7 +31,7 @@ final class SFTPMessages {
     private static final ResourceBundle BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME, UTF8Control.INSTANCE);
 
     private SFTPMessages() {
-        throw new Error("cannot create instances of " + getClass().getName()); //$NON-NLS-1$
+        throw new IllegalStateException("cannot create instances of " + getClass().getName()); //$NON-NLS-1$
     }
 
     private static synchronized String getMessage(String key) {
