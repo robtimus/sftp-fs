@@ -191,11 +191,12 @@ class SFTPPath extends SimpleAbstractPath {
         fs.move(this, target, options);
     }
 
+    @SuppressWarnings("resource")
     boolean isSameFile(Path other) throws IOException {
         if (this.equals(other)) {
             return true;
         }
-        if (other == null) {
+        if (other == null || getFileSystem() != other.getFileSystem()) {
             return false;
         }
         return fs.isSameFile(this, (SFTPPath) other);

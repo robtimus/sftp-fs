@@ -39,6 +39,7 @@ import java.nio.file.ProviderMismatchException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.spi.FileSystemProvider;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -166,6 +167,26 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         URI uri = URI.create("sftp://sftp.github.com/");
         FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
         assertEquals(uri.toString(), exception.getMessage());
+    }
+
+    // SFTPFileSystemProvider.isSameFile
+
+    @Test
+    void testIsSameFileWithDifferentTypes() throws IOException {
+
+        SFTPFileSystemProvider sftpProvider = new SFTPFileSystemProvider();
+
+        @SuppressWarnings("resource")
+        FileSystem defaultFileSystem = FileSystems.getDefault();
+        FileSystemProvider defaultProvider = defaultFileSystem.provider();
+
+        try (SFTPFileSystem fs1 = newFileSystem(sftpProvider, createEnv())) {
+            SFTPPath path1 = new SFTPPath(fs1, "pom.xml");
+            Path path2 = Paths.get("pom.xml");
+
+            assertFalse(sftpProvider.isSameFile(path1, path2));
+            assertFalse(defaultProvider.isSameFile(path2, path1));
+        }
     }
 
     // SFTPFileSystemProvider.getFileAttributeView
