@@ -164,7 +164,10 @@ final class OpenOptions {
         }
 
         // read and write contract each other; read and append contract each other; append and truncateExisting contract each other
-        if ((read && write) || (read && append) || (append && truncateExisting)) {
+        if (read && write
+                || read && append
+                || append && truncateExisting) {
+
             throw Messages.fileSystemProvider().illegalOpenOptionCombination(options);
         }
 

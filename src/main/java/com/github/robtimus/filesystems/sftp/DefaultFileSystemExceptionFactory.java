@@ -122,15 +122,15 @@ public class DefaultFileSystemExceptionFactory implements FileSystemExceptionFac
     private FileSystemException asFileSystemException(String file, String other, SftpException e) {
         final FileSystemException exception;
         switch (e.id) {
-        case ChannelSftp.SSH_FX_NO_SUCH_FILE:
-            exception = new NoSuchFileException(file, other, e.getMessage());
-            break;
-        case ChannelSftp.SSH_FX_PERMISSION_DENIED:
-            exception = new AccessDeniedException(file, other, e.getMessage());
-            break;
-        default:
-            exception = new FileSystemException(file, other, e.getMessage());
-            break;
+            case ChannelSftp.SSH_FX_NO_SUCH_FILE:
+                exception = new NoSuchFileException(file, other, e.getMessage());
+                break;
+            case ChannelSftp.SSH_FX_PERMISSION_DENIED:
+                exception = new AccessDeniedException(file, other, e.getMessage());
+                break;
+            default:
+                exception = new FileSystemException(file, other, e.getMessage());
+                break;
         }
         exception.initCause(e);
         return exception;

@@ -568,14 +568,14 @@ class SFTPFileSystem extends FileSystem {
 
     private boolean hasAccess(SftpATTRS attrs, AccessMode mode) {
         switch (mode) {
-        case READ:
-            return PosixFilePermissionSupport.hasPermission(attrs.getPermissions(), PosixFilePermission.OWNER_READ);
-        case WRITE:
-            return PosixFilePermissionSupport.hasPermission(attrs.getPermissions(), PosixFilePermission.OWNER_WRITE);
-        case EXECUTE:
-            return PosixFilePermissionSupport.hasPermission(attrs.getPermissions(), PosixFilePermission.OWNER_EXECUTE);
-        default:
-            return false;
+            case READ:
+                return PosixFilePermissionSupport.hasPermission(attrs.getPermissions(), PosixFilePermission.OWNER_READ);
+            case WRITE:
+                return PosixFilePermissionSupport.hasPermission(attrs.getPermissions(), PosixFilePermission.OWNER_WRITE);
+            case EXECUTE:
+                return PosixFilePermissionSupport.hasPermission(attrs.getPermissions(), PosixFilePermission.OWNER_EXECUTE);
+            default:
+                return false;
         }
     }
 
@@ -707,55 +707,55 @@ class SFTPFileSystem extends FileSystem {
 
         for (Map.Entry<String, Object> entry : result.entrySet()) {
             switch (entry.getKey()) {
-            case "basic:lastModifiedTime": //$NON-NLS-1$
-            case "posix:lastModifiedTime": //$NON-NLS-1$
-                entry.setValue(posixAttributes.lastModifiedTime());
-                break;
-            case "basic:lastAccessTime": //$NON-NLS-1$
-            case "posix:lastAccessTime": //$NON-NLS-1$
-                entry.setValue(posixAttributes.lastAccessTime());
-                break;
-            case "basic:creationTime": //$NON-NLS-1$
-            case "posix:creationTime": //$NON-NLS-1$
-                entry.setValue(posixAttributes.creationTime());
-                break;
-            case "basic:size": //$NON-NLS-1$
-            case "posix:size": //$NON-NLS-1$
-                entry.setValue(posixAttributes.size());
-                break;
-            case "basic:isRegularFile": //$NON-NLS-1$
-            case "posix:isRegularFile": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isRegularFile());
-                break;
-            case "basic:isDirectory": //$NON-NLS-1$
-            case "posix:isDirectory": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isDirectory());
-                break;
-            case "basic:isSymbolicLink": //$NON-NLS-1$
-            case "posix:isSymbolicLink": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isSymbolicLink());
-                break;
-            case "basic:isOther": //$NON-NLS-1$
-            case "posix:isOther": //$NON-NLS-1$
-                entry.setValue(posixAttributes.isOther());
-                break;
-            case "basic:fileKey": //$NON-NLS-1$
-            case "posix:fileKey": //$NON-NLS-1$
-                entry.setValue(posixAttributes.fileKey());
-                break;
-            case "owner:owner": //$NON-NLS-1$
-            case "posix:owner": //$NON-NLS-1$
-                entry.setValue(posixAttributes.owner());
-                break;
-            case "posix:group": //$NON-NLS-1$
-                entry.setValue(posixAttributes.group());
-                break;
-            case "posix:permissions": //$NON-NLS-1$
-                entry.setValue(posixAttributes.permissions());
-                break;
-            default:
-                // should not occur
-                throw new IllegalStateException("unexpected attribute name: " + entry.getKey()); //$NON-NLS-1$
+                case "basic:lastModifiedTime": //$NON-NLS-1$
+                case "posix:lastModifiedTime": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.lastModifiedTime());
+                    break;
+                case "basic:lastAccessTime": //$NON-NLS-1$
+                case "posix:lastAccessTime": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.lastAccessTime());
+                    break;
+                case "basic:creationTime": //$NON-NLS-1$
+                case "posix:creationTime": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.creationTime());
+                    break;
+                case "basic:size": //$NON-NLS-1$
+                case "posix:size": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.size());
+                    break;
+                case "basic:isRegularFile": //$NON-NLS-1$
+                case "posix:isRegularFile": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isRegularFile());
+                    break;
+                case "basic:isDirectory": //$NON-NLS-1$
+                case "posix:isDirectory": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isDirectory());
+                    break;
+                case "basic:isSymbolicLink": //$NON-NLS-1$
+                case "posix:isSymbolicLink": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isSymbolicLink());
+                    break;
+                case "basic:isOther": //$NON-NLS-1$
+                case "posix:isOther": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.isOther());
+                    break;
+                case "basic:fileKey": //$NON-NLS-1$
+                case "posix:fileKey": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.fileKey());
+                    break;
+                case "owner:owner": //$NON-NLS-1$
+                case "posix:owner": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.owner());
+                    break;
+                case "posix:group": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.group());
+                    break;
+                case "posix:permissions": //$NON-NLS-1$
+                    entry.setValue(posixAttributes.permissions());
+                    break;
+                default:
+                    // should not occur
+                    throw new IllegalStateException("unexpected attribute name: " + entry.getKey()); //$NON-NLS-1$
             }
         }
         return result;
@@ -871,24 +871,24 @@ class SFTPFileSystem extends FileSystem {
         boolean followLinks = LinkOptionSupport.followLinks(options);
 
         switch (attribute) {
-        case "basic:lastModifiedTime": //$NON-NLS-1$
-        case "posix:lastModifiedTime": //$NON-NLS-1$
-            setLastModifiedTime(path, (FileTime) value, followLinks);
-            break;
-        case "owner:owner": //$NON-NLS-1$
-        case "posix:owner": //$NON-NLS-1$
-            setOwner(path, (UserPrincipal) value, followLinks);
-            break;
-        case "posix:group": //$NON-NLS-1$
-            setGroup(path, (GroupPrincipal) value, followLinks);
-            break;
-        case "posix:permissions": //$NON-NLS-1$
-            @SuppressWarnings("unchecked")
-            Set<PosixFilePermission> permissions = (Set<PosixFilePermission>) value;
-            setPermissions(path, permissions, followLinks);
-            break;
-        default:
-            throw Messages.fileSystemProvider().unsupportedFileAttribute(attribute);
+            case "basic:lastModifiedTime": //$NON-NLS-1$
+            case "posix:lastModifiedTime": //$NON-NLS-1$
+                setLastModifiedTime(path, (FileTime) value, followLinks);
+                break;
+            case "owner:owner": //$NON-NLS-1$
+            case "posix:owner": //$NON-NLS-1$
+                setOwner(path, (UserPrincipal) value, followLinks);
+                break;
+            case "posix:group": //$NON-NLS-1$
+                setGroup(path, (GroupPrincipal) value, followLinks);
+                break;
+            case "posix:permissions": //$NON-NLS-1$
+                @SuppressWarnings("unchecked")
+                Set<PosixFilePermission> permissions = (Set<PosixFilePermission>) value;
+                setPermissions(path, permissions, followLinks);
+                break;
+            default:
+                throw Messages.fileSystemProvider().unsupportedFileAttribute(attribute);
         }
     }
 

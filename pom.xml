@@ -22,7 +22,7 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.3</version>
+    <version>1.4.2</version>
     <relativePath />
   </parent>
 
@@ -73,6 +73,8 @@
     <version.fs-core>2.0.1</version.fs-core>
     <version.jsch>0.1.55</version.jsch>
     <version.sshd-core>1.7.0</version.sshd-core>
+    <!-- Use version 1.7.30 to match the latest release; this will allow Snyk to warn for vulnerabilities -->
+    <version.slf4j>1.7.30</version.slf4j>
   </properties>
 
   <dependencies>
