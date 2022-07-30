@@ -16,9 +16,10 @@ name: Maven
 on: [push, pull_request]
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.os}}
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         java: [8, 11, 17]
       fail-fast: false
     steps:

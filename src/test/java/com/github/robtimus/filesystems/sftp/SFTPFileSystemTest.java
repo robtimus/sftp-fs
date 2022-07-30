@@ -19,6 +19,7 @@ package com.github.robtimus.filesystems.sftp;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.AccessMode;
@@ -506,13 +508,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
     @Test
     void testNewByteChannelWrite() throws IOException {
-        addFile("/foo/bar");
+        Path bar = addFile("/foo/bar");
+
+        byte[] newContents = "Lorem ipsum".getBytes();
 
         Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.WRITE);
         try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
             // don't do anything with the channel, there's a separate test for that
             assertEquals(0, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(newContents.length, channel.size());
         }
+
+        assertArrayEquals(newContents, Files.readAllBytes(bar));
     }
 
     @Test
@@ -520,11 +528,21 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Path bar = addFile("/foo/bar");
         setContents(bar, new byte[1024]);
 
+        byte[] newContents = "Lorem ipsum".getBytes();
+
         Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.WRITE, StandardOpenOption.APPEND);
         try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
             // don't do anything with the channel, there's a separate test for that
-            assertEquals(Files.size(bar), channel.size());
+            long size = Files.size(bar);
+            assertEquals(size, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(size + newContents.length, channel.size());
         }
+
+        byte[] totalNewContents = new byte[1024 + newContents.length];
+        System.arraycopy(newContents, 0, totalNewContents, 1024, newContents.length);
+
+        assertArrayEquals(totalNewContents, Files.readAllBytes(bar));
     }
 
     // SFTPFileSystem.newDirectoryStream
@@ -1511,12 +1529,13 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesDirectoryFollowLinks() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesDirectoryFollowLinksForDirectory() throws IOException {
+        addDirectory("/foo");
 
         PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/foo"));
 
-        assertEquals(Files.size(foo), attributes.size());
+        // Directories always have size 0 when using sshd-core
+        assertEquals(0, attributes.size());
         assertNotNull(attributes.owner().getName());
         assertNotNull(attributes.group().getName());
         assertNotNull(attributes.permissions());
@@ -1527,8 +1546,41 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesDirectoryNoFollowLinks() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesDirectoryFollowLinksForFile() throws IOException {
+        Path foo = addFile("/foo");
+
+        PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/foo"));
+
+        assertEquals(Files.size(foo), attributes.size());
+        assertNotNull(attributes.owner().getName());
+        assertNotNull(attributes.group().getName());
+        assertNotNull(attributes.permissions());
+        assertFalse(attributes.isDirectory());
+        assertTrue(attributes.isRegularFile());
+        assertFalse(attributes.isSymbolicLink());
+        assertFalse(attributes.isOther());
+    }
+
+    @Test
+    void testReadAttributesDirectoryNoFollowLinksForDirectory() throws IOException {
+        addDirectory("/foo");
+
+        PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/foo"), LinkOption.NOFOLLOW_LINKS);
+
+        // Directories always have size 0 when using sshd-core
+        assertEquals(0, attributes.size());
+        assertNotNull(attributes.owner().getName());
+        assertNotNull(attributes.group().getName());
+        assertNotNull(attributes.permissions());
+        assertTrue(attributes.isDirectory());
+        assertFalse(attributes.isRegularFile());
+        assertFalse(attributes.isSymbolicLink());
+        assertFalse(attributes.isOther());
+    }
+
+    @Test
+    void testReadAttributesDirectoryNoFollowLinksForFile() throws IOException {
+        Path foo = addFile("/foo");
 
         PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/foo"), LinkOption.NOFOLLOW_LINKS);
 
@@ -1536,8 +1588,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertNotNull(attributes.owner().getName());
         assertNotNull(attributes.group().getName());
         assertNotNull(attributes.permissions());
-        assertTrue(attributes.isDirectory());
-        assertFalse(attributes.isRegularFile());
+        assertFalse(attributes.isDirectory());
+        assertTrue(attributes.isRegularFile());
         assertFalse(attributes.isSymbolicLink());
         assertFalse(attributes.isOther());
     }
@@ -1593,10 +1645,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         PosixFileAttributes attributes = fileSystem.readAttributes(createPath("/bar"));
 
-        long sizeOfFoo = Files.readAttributes(foo, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS).size();
-
-        // on Windows, foo and bar have the same sizes
-        assertEquals(sizeOfFoo, attributes.size());
+        // Directories always have size 0 when using sshd-core
+        assertEquals(0, attributes.size());
         assertNotNull(attributes.owner().getName());
         assertNotNull(attributes.group().getName());
         assertNotNull(attributes.permissions());
@@ -1717,25 +1767,63 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesMapNoTypeMultiple() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesMapNoTypeMultipleForDirectory() throws IOException {
+        addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "size,isDirectory");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("basic:size", Files.size(foo));
+        // Directories always have size 0 when using sshd-core
+        expected.put("basic:size", 0L);
         expected.put("basic:isDirectory", true);
         assertEquals(expected, attributes);
     }
 
     @Test
-    void testReadAttributesMapNoTypeAll() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesMapNoTypeMultipleForFile() throws IOException {
+        Path foo = addFile("/foo");
+
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "size,isRegularFile");
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("basic:size", Files.size(foo));
+        expected.put("basic:isRegularFile", true);
+        assertEquals(expected, attributes);
+    }
+
+    @Test
+    void testReadAttributesMapNoTypeAllForDirectory() throws IOException {
+        addDirectory("/foo");
+
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "*");
+        Map<String, Object> expected = new HashMap<>();
+        // Directories always have size 0 when using sshd-core
+        expected.put("basic:size", 0L);
+        expected.put("basic:isRegularFile", false);
+        expected.put("basic:isDirectory", true);
+        expected.put("basic:isSymbolicLink", false);
+        expected.put("basic:isOther", false);
+        expected.put("basic:fileKey", null);
+
+        assertNotNull(attributes.remove("basic:lastModifiedTime"));
+        assertNotNull(attributes.remove("basic:lastAccessTime"));
+        assertNotNull(attributes.remove("basic:creationTime"));
+        assertEquals(expected, attributes);
+
+        attributes = fileSystem.readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
+        assertNotNull(attributes.remove("basic:lastModifiedTime"));
+        assertNotNull(attributes.remove("basic:lastAccessTime"));
+        assertNotNull(attributes.remove("basic:creationTime"));
+        assertEquals(expected, attributes);
+    }
+
+    @Test
+    void testReadAttributesMapNoTypeAllForFile() throws IOException {
+        Path foo = addFile("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "*");
         Map<String, Object> expected = new HashMap<>();
         expected.put("basic:size", Files.size(foo));
-        expected.put("basic:isRegularFile", false);
-        expected.put("basic:isDirectory", true);
+        expected.put("basic:isRegularFile", true);
+        expected.put("basic:isDirectory", false);
         expected.put("basic:isSymbolicLink", false);
         expected.put("basic:isOther", false);
         expected.put("basic:fileKey", null);
@@ -1835,25 +1923,63 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesMapBasicMultiple() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesMapBasicMultipleForDirectory() throws IOException {
+        addDirectory("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:size,isDirectory");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("basic:size", Files.size(foo));
+        // Directories always have size 0 when using sshd-core
+        expected.put("basic:size", 0L);
         expected.put("basic:isDirectory", true);
         assertEquals(expected, attributes);
     }
 
     @Test
-    void testReadAttributesMapBasicAll() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesMapBasicMultipleForFile() throws IOException {
+        Path foo = addFile("/foo");
+
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:size,isRegularFile");
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("basic:size", Files.size(foo));
+        expected.put("basic:isRegularFile", true);
+        assertEquals(expected, attributes);
+    }
+
+    @Test
+    void testReadAttributesMapBasicAllForDirectory() throws IOException {
+        addDirectory("/foo");
+
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:*");
+        Map<String, Object> expected = new HashMap<>();
+        // Directories always have size 0 when using sshd-core
+        expected.put("basic:size", 0L);
+        expected.put("basic:isRegularFile", false);
+        expected.put("basic:isDirectory", true);
+        expected.put("basic:isSymbolicLink", false);
+        expected.put("basic:isOther", false);
+        expected.put("basic:fileKey", null);
+
+        assertNotNull(attributes.remove("basic:lastModifiedTime"));
+        assertNotNull(attributes.remove("basic:lastAccessTime"));
+        assertNotNull(attributes.remove("basic:creationTime"));
+        assertEquals(expected, attributes);
+
+        attributes = fileSystem.readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
+        assertNotNull(attributes.remove("basic:lastModifiedTime"));
+        assertNotNull(attributes.remove("basic:lastAccessTime"));
+        assertNotNull(attributes.remove("basic:creationTime"));
+        assertEquals(expected, attributes);
+    }
+
+    @Test
+    void testReadAttributesMapBasicAllForFile() throws IOException {
+        Path foo = addFile("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:*");
         Map<String, Object> expected = new HashMap<>();
         expected.put("basic:size", Files.size(foo));
-        expected.put("basic:isRegularFile", false);
-        expected.put("basic:isDirectory", true);
+        expected.put("basic:isRegularFile", true);
+        expected.put("basic:isDirectory", false);
         expected.put("basic:isSymbolicLink", false);
         expected.put("basic:isOther", false);
         expected.put("basic:fileKey", null);
@@ -2002,8 +2128,20 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesMapPosixMultiple() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesMapPosixMultipleForDirectory() throws IOException {
+        addDirectory("/foo");
+
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:size,owner,group");
+        // Directories always have size 0 when using sshd-core
+        Map<String, ?> expected = Collections.singletonMap("posix:size", 0L);
+        assertNotNull(attributes.remove("posix:owner"));
+        assertNotNull(attributes.remove("posix:group"));
+        assertEquals(expected, attributes);
+    }
+
+    @Test
+    void testReadAttributesMapPosixMultipleForFile() throws IOException {
+        Path foo = addFile("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:size,owner,group");
         Map<String, ?> expected = Collections.singletonMap("posix:size", Files.size(foo));
@@ -2013,14 +2151,46 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesMapPosixAll() throws IOException {
-        Path foo = addDirectory("/foo");
+    void testReadAttributesMapPosixAllForDirectory() throws IOException {
+        addDirectory("/foo");
+
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:*");
+        Map<String, Object> expected = new HashMap<>();
+        // Directories always have size 0 when using sshd-core
+        expected.put("posix:size", 0L);
+        expected.put("posix:isRegularFile", false);
+        expected.put("posix:isDirectory", true);
+        expected.put("posix:isSymbolicLink", false);
+        expected.put("posix:isOther", false);
+        expected.put("posix:fileKey", null);
+
+        assertNotNull(attributes.remove("posix:lastModifiedTime"));
+        assertNotNull(attributes.remove("posix:lastAccessTime"));
+        assertNotNull(attributes.remove("posix:creationTime"));
+        assertNotNull(attributes.remove("posix:owner"));
+        assertNotNull(attributes.remove("posix:group"));
+        assertNotNull(attributes.remove("posix:permissions"));
+        assertEquals(expected, attributes);
+
+        attributes = fileSystem.readAttributes(createPath("/foo"), "posix:lastModifiedTime,*");
+        assertNotNull(attributes.remove("posix:lastModifiedTime"));
+        assertNotNull(attributes.remove("posix:lastAccessTime"));
+        assertNotNull(attributes.remove("posix:creationTime"));
+        assertNotNull(attributes.remove("posix:owner"));
+        assertNotNull(attributes.remove("posix:group"));
+        assertNotNull(attributes.remove("posix:permissions"));
+        assertEquals(expected, attributes);
+    }
+
+    @Test
+    void testReadAttributesMapPosixAllForFile() throws IOException {
+        Path foo = addFile("/foo");
 
         Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:*");
         Map<String, Object> expected = new HashMap<>();
         expected.put("posix:size", Files.size(foo));
-        expected.put("posix:isRegularFile", false);
-        expected.put("posix:isDirectory", true);
+        expected.put("posix:isRegularFile", true);
+        expected.put("posix:isDirectory", false);
         expected.put("posix:isSymbolicLink", false);
         expected.put("posix:isOther", false);
         expected.put("posix:fileKey", null);

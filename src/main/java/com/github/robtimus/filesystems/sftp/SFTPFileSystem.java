@@ -313,6 +313,9 @@ class SFTPFileSystem extends FileSystem {
             boolean requireAttributes = openOptions.append;
             SFTPAttributesAndOutputStreamPair outPair = newOutputStream(channel, path, requireAttributes, openOptions);
             long initialPosition = outPair.attributes == null ? 0 : outPair.attributes.getSize();
+            if (openOptions.write && !openOptions.append) {
+                initialPosition = 0;
+            }
             return FileSystemProviderSupport.createSeekableByteChannel(outPair.out, initialPosition);
         }
     }

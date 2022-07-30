@@ -268,6 +268,7 @@ abstract class AbstractSFTPFileSystemTest {
             Files.createDirectories(parent);
         }
         Files.createFile(file);
+        Files.write(file, "Hello world".getBytes());
         return file;
     }
 
