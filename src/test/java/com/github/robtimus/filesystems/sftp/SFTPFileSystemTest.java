@@ -63,8 +63,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
 import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
@@ -1452,8 +1453,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         fileSystem.checkAccess(createPath("/foo/bar"), AccessMode.WRITE);
     }
 
-    @Disabled("On Windows, the permissions are not reported correctly, but always as rw-rw-rw-")
     @Test
+    @DisabledOnOs(value = OS.WINDOWS, disabledReason = "On Windows, the permissions are not reported correctly, but always as rw-rw-rw-")
     void testCheckAccessOnlyWriteReadOnly() throws IOException {
         Path bar = addDirectory("/foo/bar");
         bar.toFile().setReadOnly();

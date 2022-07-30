@@ -27,14 +27,23 @@ import com.github.robtimus.filesystems.UTF8Control;
  */
 final class SFTPMessages {
 
-    private static final String BUNDLE_NAME = "com.github.robtimus.filesystems.sftp.fs"; //$NON-NLS-1$
-    private static final ResourceBundle BUNDLE = ResourceBundle.getBundle(BUNDLE_NAME, UTF8Control.INSTANCE);
+    private static final ResourceBundle BUNDLE = getBundle();
 
     private SFTPMessages() {
         throw new IllegalStateException("cannot create instances of " + getClass().getName()); //$NON-NLS-1$
     }
 
-    private static synchronized String getMessage(String key) {
+    private static ResourceBundle getBundle() {
+        final String baseName = "com.github.robtimus.filesystems.sftp.fs"; //$NON-NLS-1$
+        try {
+            return ResourceBundle.getBundle(baseName, UTF8Control.INSTANCE);
+        } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
+            // Java 9 or up; defaults to UTF-8
+            return ResourceBundle.getBundle(baseName);
+        }
+    }
+
+    static synchronized String getMessage(String key) {
         return BUNDLE.getString(key);
     }
 
