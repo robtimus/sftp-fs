@@ -545,6 +545,147 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertArrayEquals(totalNewContents, Files.readAllBytes(bar));
     }
 
+    @Test
+    void testNewByteChannelCreateWriteExisting() throws IOException {
+        Path bar = addFile("/foo/bar");
+
+        byte[] newContents = "Lorem ipsum".getBytes();
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+        try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
+            // don't do anything with the channel, there's a separate test for that
+            assertEquals(0, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(newContents.length, channel.size());
+        }
+
+        assertArrayEquals(newContents, Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateAppendExisting() throws IOException {
+        Path bar = addFile("/foo/bar");
+        setContents(bar, new byte[1024]);
+
+        byte[] newContents = "Lorem ipsum".getBytes();
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
+            // don't do anything with the channel, there's a separate test for that
+            long size = Files.size(bar);
+            assertEquals(size, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(size + newContents.length, channel.size());
+        }
+
+        byte[] totalNewContents = new byte[1024 + newContents.length];
+        System.arraycopy(newContents, 0, totalNewContents, 1024, newContents.length);
+
+        assertArrayEquals(totalNewContents, Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateWriteNonExisting() throws IOException {
+        addDirectory("/foo");
+
+        byte[] newContents = "Lorem ipsum".getBytes();
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+        try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
+            // don't do anything with the channel, there's a separate test for that
+            assertEquals(0, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(newContents.length, channel.size());
+        }
+
+        Path bar = getFile("/foo/bar");
+
+        assertArrayEquals(newContents, Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateAppendNonExisting() throws IOException {
+        addDirectory("/foo");
+
+        byte[] newContents = "Lorem ipsum".getBytes();
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
+            // don't do anything with the channel, there's a separate test for that
+            assertEquals(0, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(newContents.length, channel.size());
+        }
+
+        Path bar = getFile("/foo/bar");
+
+        assertArrayEquals(newContents, Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateNewWriteExisting() throws IOException {
+        Path bar = addFile("/foo/bar");
+        byte[] oldContents = Files.readAllBytes(bar);
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class,
+                () -> fileSystem.newByteChannel(createPath("/foo/bar"), options));
+        assertEquals("/foo/bar", exception.getFile());
+
+        assertArrayEquals(oldContents, Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateNewAppendExisting() throws IOException {
+        Path bar = addFile("/foo/bar");
+        setContents(bar, new byte[1024]);
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.APPEND);
+        FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class,
+                () -> fileSystem.newByteChannel(createPath("/foo/bar"), options));
+        assertEquals("/foo/bar", exception.getFile());
+
+        assertArrayEquals(new byte[1024], Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateNewWriteNonExisting() throws IOException {
+        addDirectory("/foo");
+
+        byte[] newContents = "Lorem ipsum".getBytes();
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
+            // don't do anything with the channel, there's a separate test for that
+            assertEquals(0, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(newContents.length, channel.size());
+        }
+
+        Path bar = getFile("/foo/bar");
+
+        assertArrayEquals(newContents, Files.readAllBytes(bar));
+    }
+
+    @Test
+    void testNewByteChannelCreateNewAppendNonExisting() throws IOException {
+        addDirectory("/foo");
+
+        byte[] newContents = "Lorem ipsum".getBytes();
+
+        Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.APPEND);
+        try (SeekableByteChannel channel = fileSystem.newByteChannel(createPath("/foo/bar"), options)) {
+            // don't do anything with the channel, there's a separate test for that
+            assertEquals(0, channel.size());
+            channel.write(ByteBuffer.wrap(newContents));
+            assertEquals(newContents.length, channel.size());
+        }
+
+        Path bar = getFile("/foo/bar");
+
+        assertArrayEquals(newContents, Files.readAllBytes(bar));
+    }
+
     // SFTPFileSystem.newDirectoryStream
 
     @Test

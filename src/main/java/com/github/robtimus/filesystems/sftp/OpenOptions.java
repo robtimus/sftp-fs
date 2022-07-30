@@ -69,8 +69,7 @@ final class OpenOptions {
         for (OpenOption option : options) {
             if (option == StandardOpenOption.DELETE_ON_CLOSE) {
                 deleteOnClose = true;
-            } else if (option != StandardOpenOption.READ && option != StandardOpenOption.TRUNCATE_EXISTING && !isIgnoredOpenOption(option)) {
-                // TRUNCATE_EXISTING is ignored in combination with READ
+            } else if (option != StandardOpenOption.READ && !isIgnoredOpenOption(option)) {
                 throw Messages.fileSystemProvider().unsupportedOpenOption(option);
             }
         }
@@ -153,21 +152,18 @@ final class OpenOptions {
             read = true;
         }
 
-        // read contradicts with write, append, create and createNew; TRUNCATE_EXISTING is ignored in combination with READ
-        if (read && (write || append || create || createNew)) {
+        // APPEND may not be used with READ or TRUNCATE_EXISTING
+        if (append && (read || truncateExisting)) {
             throw Messages.fileSystemProvider().illegalOpenOptionCombination(options);
         }
 
-        // append and truncateExisting contract each other
-        if (append && truncateExisting) {
-            throw Messages.fileSystemProvider().illegalOpenOptionCombination(options);
+        if (append) {
+            // !read, open in write-only mode
+            write = true;
         }
 
-        // read and write contract each other; read and append contract each other; append and truncateExisting contract each other
-        if (read && write
-                || read && append
-                || append && truncateExisting) {
-
+        // although Files.newByteChannel supports READ + WRITE, SFTPFileSystem does not
+        if (read && write) {
             throw Messages.fileSystemProvider().illegalOpenOptionCombination(options);
         }
 
