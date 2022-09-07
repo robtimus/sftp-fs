@@ -21,20 +21,18 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import org.apache.sshd.common.util.GenericUtils;
 import org.apache.sshd.common.util.io.IoUtils;
-import org.apache.sshd.server.Command;
+import org.apache.sshd.server.channel.ChannelSession;
+import org.apache.sshd.server.command.Command;
 import org.apache.sshd.server.session.ServerSession;
-import org.apache.sshd.server.subsystem.sftp.AbstractSftpEventListenerAdapter;
-import org.apache.sshd.server.subsystem.sftp.DirectoryHandle;
-import org.apache.sshd.server.subsystem.sftp.Handle;
-import org.apache.sshd.server.subsystem.sftp.SftpErrorStatusDataHandler;
-import org.apache.sshd.server.subsystem.sftp.SftpEventListener;
-import org.apache.sshd.server.subsystem.sftp.SftpFileSystemAccessor;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystem;
-import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
-import org.apache.sshd.server.subsystem.sftp.UnsupportedAttributePolicy;
+import org.apache.sshd.sftp.server.AbstractSftpEventListenerAdapter;
+import org.apache.sshd.sftp.server.DirectoryHandle;
+import org.apache.sshd.sftp.server.Handle;
+import org.apache.sshd.sftp.server.SftpEventListener;
+import org.apache.sshd.sftp.server.SftpSubsystem;
+import org.apache.sshd.sftp.server.SftpSubsystemConfigurator;
+import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 
 /**
  * {@link SftpSubsystem} does not follow links when the {@code stat} command is executed. This class fixes that.
@@ -44,9 +42,8 @@ import org.apache.sshd.server.subsystem.sftp.UnsupportedAttributePolicy;
 @SuppressWarnings("javadoc")
 public class FixedSftpSubsystem extends SftpSubsystem {
 
-    public FixedSftpSubsystem(ExecutorService executorService, boolean shutdownOnExit, UnsupportedAttributePolicy policy,
-            SftpFileSystemAccessor accessor, SftpErrorStatusDataHandler errorStatusDataHandler) {
-        super(executorService, shutdownOnExit, policy, accessor, errorStatusDataHandler);
+    public FixedSftpSubsystem(ChannelSession channel, SftpSubsystemConfigurator configurator) {
+        super(channel, configurator);
     }
 
     @Override
@@ -58,9 +55,8 @@ public class FixedSftpSubsystem extends SftpSubsystem {
     public static final class Factory extends SftpSubsystemFactory {
 
         @Override
-        public Command create() {
-            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy(),
-                    getFileSystemAccessor(), getErrorStatusDataHandler());
+        public Command createSubsystem(ChannelSession channel) throws IOException {
+            SftpSubsystem subsystem = new FixedSftpSubsystem(channel, this);
             Collection<? extends SftpEventListener> listeners = getRegisteredListeners();
             if (GenericUtils.size(listeners) > 0) {
                 for (SftpEventListener l : listeners) {
@@ -75,9 +71,8 @@ public class FixedSftpSubsystem extends SftpSubsystem {
     public static final class FactoryWithoutSystemDirs extends SftpSubsystemFactory {
 
         @Override
-        public Command create() {
-            SftpSubsystem subsystem = new FixedSftpSubsystem(getExecutorService(), isShutdownOnExit(), getUnsupportedAttributePolicy(),
-                    getFileSystemAccessor(), getErrorStatusDataHandler());
+        public Command createSubsystem(ChannelSession channel) throws IOException {
+            SftpSubsystem subsystem = new FixedSftpSubsystem(channel, this);
             Collection<? extends SftpEventListener> listeners = getRegisteredListeners();
             if (GenericUtils.size(listeners) > 0) {
                 for (SftpEventListener l : listeners) {

@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -657,8 +659,9 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         if (containsKey(FILENAME_ENCODING)) {
             String filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, String.class, null);
             try {
-                channel.setFilenameEncoding(filenameEncoding);
-            } catch (SftpException e) {
+                Charset charset = filenameEncoding != null ? Charset.forName(filenameEncoding) : null;
+                channel.setFilenameEncoding(charset);
+            } catch (UnsupportedCharsetException e) {
                 throw asFileSystemException(e);
             }
         }

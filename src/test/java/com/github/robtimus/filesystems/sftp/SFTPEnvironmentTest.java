@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
@@ -315,7 +316,7 @@ class SFTPEnvironmentTest {
     }
 
     @Test
-    void testInitializeChannelPreConnectFull() throws IOException, SftpException {
+    void testInitializeChannelPreConnectFull() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeFully(env);
 
@@ -324,12 +325,12 @@ class SFTPEnvironmentTest {
         env.initializePreConnect(channel);
 
         verify(channel).setAgentForwarding((boolean) env.get("agentForwarding"));
-        verify(channel).setFilenameEncoding((String) env.get("filenameEncoding"));
+        verify(channel).setFilenameEncoding(Charset.forName((String) env.get("filenameEncoding")));
         verifyNoMoreInteractions(channel);
     }
 
     @Test
-    void testInitializeChannelPreConnectWithNulls() throws IOException, SftpException {
+    void testInitializeChannelPreConnectWithNulls() throws IOException {
         SFTPEnvironment env = new SFTPEnvironment();
         initializeWithNulls(env);
 
@@ -337,7 +338,7 @@ class SFTPEnvironmentTest {
 
         env.initializePreConnect(channel);
 
-        verify(channel).setFilenameEncoding(null);
+        verify(channel).setFilenameEncoding((Charset) null);
         verifyNoMoreInteractions(channel);
     }
 
@@ -513,7 +514,7 @@ class SFTPEnvironmentTest {
         }
 
         @Override
-        public Vector<?> getIdentities() {
+        public Vector<com.jcraft.jsch.Identity> getIdentities() {
             return null;
         }
 

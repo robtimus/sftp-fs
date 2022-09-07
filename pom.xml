@@ -71,8 +71,8 @@
 
   <properties>
     <version.fs-core>2.0.2</version.fs-core>
-    <version.jsch>0.1.55</version.jsch>
-    <version.sshd-core>1.7.0</version.sshd-core>
+    <version.jsch>0.2.4</version.jsch>
+    <version.sshd-sftp>2.8.0</version.sshd-sftp>
   </properties>
 
   <dependencies>
@@ -83,7 +83,7 @@
     </dependency>
 
     <dependency>
-      <groupId>com.jcraft</groupId>
+      <groupId>com.github.mwiede</groupId>
       <artifactId>jsch</artifactId>
       <version>${version.jsch}</version>
     </dependency>
@@ -108,14 +108,15 @@
 
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
+      <version>${version.mockito}</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.apache.sshd</groupId>
-      <artifactId>sshd-core</artifactId>
-      <version>${version.sshd-core}</version>
+      <artifactId>sshd-sftp</artifactId>
+      <version>${version.sshd-sftp}</version>
       <scope>test</scope>
     </dependency>
 
@@ -150,6 +151,7 @@
           <configuration>
             <links>
               <link>https://robtimus.github.io/fs-core/apidocs/</link>
+              <!-- https://github.com/mwiede/jsch has no javadoc available yet -->
               <link>https://epaul.github.io/jsch-documentation/javadoc/</link>
             </links>
           </configuration>
@@ -171,13 +173,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Automatic-Module-Name>com.github.robtimus.filesystems.sftp</Automatic-Module-Name>
-            </manifestEntries>
-          </archive>
-        </configuration>
       </plugin>
 
       <plugin>
@@ -198,6 +193,11 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+
+      <plugin>
+        <groupId>org.moditect</groupId>
+        <artifactId>moditect-maven-plugin</artifactId>
       </plugin>
 
       <plugin>
@@ -278,6 +278,8 @@
               <!-- Allow JUnit to fully access the test classes -->
               <argLine>
                 --add-opens com.github.robtimus.filesystems.sftp/com.github.robtimus.filesystems.sftp=ALL-UNNAMED
+                --add-opens com.jcraft.jsch/com.jcraft.jsch=com.github.robtimus.filesystems.sftp
+                --add-modules org.slf4j
               </argLine>
             </configuration>
           </plugin>
