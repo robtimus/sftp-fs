@@ -413,7 +413,7 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      * @param encoding The filename encoding to use.
      * @return This object.
      */
-    public SFTPEnvironment withFilenameEncoding(String encoding) {
+    public SFTPEnvironment withFilenameEncoding(Charset encoding) {
         put(FILENAME_ENCODING, encoding);
         return this;
     }
@@ -657,10 +657,9 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         }
 
         if (containsKey(FILENAME_ENCODING)) {
-            String filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, String.class, null);
+            Charset filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, Charset.class, null);
             try {
-                Charset charset = filenameEncoding != null ? Charset.forName(filenameEncoding) : null;
-                channel.setFilenameEncoding(charset);
+                channel.setFilenameEncoding(filenameEncoding);
             } catch (UnsupportedCharsetException e) {
                 throw asFileSystemException(e);
             }

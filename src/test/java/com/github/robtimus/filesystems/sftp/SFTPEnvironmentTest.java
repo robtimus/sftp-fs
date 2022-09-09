@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
@@ -100,7 +101,7 @@ class SFTPEnvironmentTest {
                 arguments("withHostKeyRepository", "hostKeyRepository", new TestHostKeyRepository()),
                 arguments("withKnownHosts", "knownHosts", new File("known_hosts")),
                 arguments("withAgentForwarding", "agentForwarding", false),
-                arguments("withFilenameEncoding", "filenameEncoding", "UTF-8"),
+                arguments("withFilenameEncoding", "filenameEncoding", StandardCharsets.UTF_8),
                 arguments("withDefaultDirectory", "defaultDir", "/"),
                 arguments("withClientConnectionCount", "clientConnectionCount", 5),
                 arguments("withClientConnectionWaitTimeout", "clientConnectionWaitTimeout", 1000L),
@@ -325,7 +326,7 @@ class SFTPEnvironmentTest {
         env.initializePreConnect(channel);
 
         verify(channel).setAgentForwarding((boolean) env.get("agentForwarding"));
-        verify(channel).setFilenameEncoding(Charset.forName((String) env.get("filenameEncoding")));
+        verify(channel).setFilenameEncoding((Charset) env.get("filenameEncoding"));
         verifyNoMoreInteractions(channel);
     }
 
@@ -462,7 +463,7 @@ class SFTPEnvironmentTest {
         env.withHostKeyRepository(new TestHostKeyRepository());
         env.withKnownHosts(new File("known_hosts"));
         env.withAgentForwarding(false);
-        env.withFilenameEncoding("UTF-8");
+        env.withFilenameEncoding(StandardCharsets.UTF_8);
         env.withDefaultDirectory("/");
         env.withClientConnectionCount(5);
         env.withFileSystemExceptionFactory(DefaultFileSystemExceptionFactory.INSTANCE);
