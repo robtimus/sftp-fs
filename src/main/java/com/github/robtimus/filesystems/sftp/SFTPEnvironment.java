@@ -26,6 +26,7 @@ import java.nio.charset.UnsupportedCharsetException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,7 +35,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
@@ -54,7 +54,7 @@ import com.jcraft.jsch.UserInfo;
  *
  * @author Rob Spoor
  */
-public class SFTPEnvironment implements Map<String, Object>, Cloneable {
+public class SFTPEnvironment implements Map<String, Object> {
 
     // session support
 
@@ -97,13 +97,10 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     // SFTP file system support
 
     private static final String DEFAULT_DIR = "defaultDir"; //$NON-NLS-1$
-    private static final int DEFAULT_CLIENT_CONNECTION_COUNT = 5;
-    private static final long DEFAULT_CLIENT_CONNECTION_WAIT_TIMEOUT = 0;
-    private static final String CLIENT_CONNECTION_COUNT = "clientConnectionCount"; //$NON-NLS-1$
-    private static final String CLIENT_CONNECTION_WAIT_TIMEOUT = "clientConnectionWaitTimeout"; //$NON-NLS-1$
+    private static final String POOL_CONFIG = "poolConfig"; //$NON-NLS-1$
     private static final String FILE_SYSTEM_EXCEPTION_FACTORY = "fileSystemExceptionFactory"; //$NON-NLS-1$
 
-    private Map<String, Object> map;
+    private final Map<String, Object> map;
 
     /**
      * Creates a new SFTP environment.
@@ -119,14 +116,6 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
      */
     public SFTPEnvironment(Map<String, Object> map) {
         this.map = Objects.requireNonNull(map);
-    }
-
-    @SuppressWarnings("unchecked")
-    static SFTPEnvironment wrap(Map<String, ?> map) {
-        if (map instanceof SFTPEnvironment) {
-            return (SFTPEnvironment) map;
-        }
-        return new SFTPEnvironment((Map<String, Object>) map);
     }
 
     // session support
@@ -433,45 +422,20 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     /**
-     * Stores the number of client connections to use. This value influences the number of concurrent threads that can access an SFTP file system.
-     *
-     * @param count The number of client connection to use.
-     * @return This object.
-     */
-    public SFTPEnvironment withClientConnectionCount(int count) {
-        put(CLIENT_CONNECTION_COUNT, count);
-        return this;
-    }
-
-    /**
-     * Stores the wait timeout to use for retrieving client connection from the connection pool.
+     * Stores the pool config to use.
      * <p>
-     * If the timeout is not larger than {@code 0}, the SFTP file system waits indefinitely until a client connection becomes available.
+     * The {@linkplain SFTPPoolConfig#maxSize() maximum pool size} influences the number of concurrent threads that can access an SFTP file system.
+     * <br>
+     * If the {@linkplain SFTPPoolConfig#maxWaitTime() maximum wait time} is {@linkplain Duration#isNegative() negative}, SFTP file systems wait
+     * indefinitely until a client connection is available. This is the default setting if no pool config is defined.
      *
-     * @param timeout The timeout in milliseconds.
+     * @param poolConfig The pool config to use.
      * @return This object.
-     * @see #withClientConnectionWaitTimeout(long, TimeUnit)
-     * @since 1.3
+     * @since 3.0
      */
-    public SFTPEnvironment withClientConnectionWaitTimeout(long timeout) {
-        put(CLIENT_CONNECTION_WAIT_TIMEOUT, timeout);
+    public SFTPEnvironment withPoolConfig(SFTPPoolConfig poolConfig) {
+        put(POOL_CONFIG, poolConfig);
         return this;
-    }
-
-    /**
-     * Stores the wait timeout to use for retrieving client connections from the connection pool.
-     * <p>
-     * If the timeout is not larger than {@code 0}, the SFTP file system waits indefinitely until a client connection becomes available.
-     *
-     * @param duration The timeout duration.
-     * @param unit The timeout unit.
-     * @return This object.
-     * @throws NullPointerException If the timeout unit is {@code null}.
-     * @see #withClientConnectionWaitTimeout(long)
-     * @since 1.3
-     */
-    public SFTPEnvironment withClientConnectionWaitTimeout(long duration, TimeUnit unit) {
-        return withClientConnectionWaitTimeout(TimeUnit.MILLISECONDS.convert(duration, unit));
     }
 
     /**
@@ -489,14 +453,8 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         return FileSystemProviderSupport.getValue(this, USERNAME, String.class, null);
     }
 
-    int getClientConnectionCount() {
-        int count = FileSystemProviderSupport.getIntValue(this, CLIENT_CONNECTION_COUNT, DEFAULT_CLIENT_CONNECTION_COUNT);
-        return Math.max(1, count);
-    }
-
-    long getClientConnectionWaitTimeout() {
-        long timeout = FileSystemProviderSupport.getLongValue(this, CLIENT_CONNECTION_WAIT_TIMEOUT, DEFAULT_CLIENT_CONNECTION_WAIT_TIMEOUT);
-        return Math.max(0, timeout);
+    SFTPPoolConfig getPoolConfig() {
+        return FileSystemProviderSupport.getValue(this, POOL_CONFIG, SFTPPoolConfig.class, SFTPPoolConfig.defaultConfig());
     }
 
     FileSystemExceptionFactory getExceptionFactory() {
@@ -511,10 +469,21 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     void initialize(JSch jsch) throws IOException {
+        configureIdentityRepository(jsch);
+        configureIdentities(jsch);
+
+        configureHostKeyRepository(jsch);
+        configureKnownHosts(jsch);
+    }
+
+    private void configureIdentityRepository(JSch jsch) {
         if (containsKey(IDENTITY_REPOSITORY)) {
             IdentityRepository identityRepository = FileSystemProviderSupport.getValue(this, IDENTITY_REPOSITORY, IdentityRepository.class, null);
             jsch.setIdentityRepository(identityRepository);
         }
+    }
+
+    private void configureIdentities(JSch jsch) throws FileSystemException {
         if (containsKey(IDENTITIES)) {
             Collection<?> identities = FileSystemProviderSupport.getValue(this, IDENTITIES, Collection.class);
             for (Object o : identities) {
@@ -530,11 +499,16 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 }
             }
         }
+    }
 
+    private void configureHostKeyRepository(JSch jsch) {
         if (containsKey(HOST_KEY_REPOSITORY)) {
             HostKeyRepository hostKeyRepository = FileSystemProviderSupport.getValue(this, HOST_KEY_REPOSITORY, HostKeyRepository.class, null);
             jsch.setHostKeyRepository(hostKeyRepository);
         }
+    }
+
+    private void configureKnownHosts(JSch jsch) throws FileSystemException {
         if (containsKey(KNOWN_HOSTS)) {
             File knownHosts = FileSystemProviderSupport.getValue(this, KNOWN_HOSTS, File.class);
             try {
@@ -550,16 +524,8 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         try {
             initialize(session);
             ChannelSftp channel = connect(session);
-            try {
-                initializePreConnect(channel);
-                connect(channel);
-                initializePostConnect(channel);
-                verifyConnection(channel);
-                return channel;
-            } catch (IOException e) {
-                channel.disconnect();
-                throw e;
-            }
+            initialize(channel);
+            return channel;
         } catch (IOException e) {
             session.disconnect();
             throw e;
@@ -577,31 +543,62 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
     }
 
     void initialize(Session session) throws IOException {
+        configureProxy(session);
+
+        configureUserInfo(session);
+
+        configurePassword(session);
+
+        configureConfig(session);
+
+        configureSocketFactory(session);
+
+        configureTimeout(session);
+
+        configureClientVersion(session);
+
+        configureHostKeyAlias(session);
+
+        configureServerAliveInterval(session);
+        configureServerAliveCountMax(session);
+    }
+
+    private void configureProxy(Session session) {
         if (containsKey(PROXY)) {
             Proxy proxy = FileSystemProviderSupport.getValue(this, PROXY, Proxy.class, null);
             session.setProxy(proxy);
         }
+    }
 
+    private void configureUserInfo(Session session) {
         if (containsKey(USER_INFO)) {
             UserInfo userInfo = FileSystemProviderSupport.getValue(this, USER_INFO, UserInfo.class, null);
             session.setUserInfo(userInfo);
         }
+    }
 
+    private void configurePassword(Session session) {
         if (containsKey(PASSWORD)) {
             char[] password = FileSystemProviderSupport.getValue(this, PASSWORD, char[].class, null);
             session.setPassword(password == null ? null : new String(password));
         }
+    }
 
+    private void configureConfig(Session session) {
         if (containsKey(CONFIG)) {
             Properties config = FileSystemProviderSupport.getValue(this, CONFIG, Properties.class, null);
             session.setConfig(config);
         }
+    }
 
+    private void configureSocketFactory(Session session) {
         if (containsKey(SOCKET_FACTORY)) {
             SocketFactory socketFactory = FileSystemProviderSupport.getValue(this, SOCKET_FACTORY, SocketFactory.class, null);
             session.setSocketFactory(socketFactory);
         }
+    }
 
+    private void configureTimeout(Session session) throws FileSystemException {
         if (containsKey(TIMEOUT)) {
             int timeout = FileSystemProviderSupport.getIntValue(this, TIMEOUT);
             try {
@@ -610,17 +607,23 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 throw asFileSystemException(e);
             }
         }
+    }
 
+    private void configureClientVersion(Session session) {
         if (containsKey(CLIENT_VERSION)) {
             String clientVersion = FileSystemProviderSupport.getValue(this, CLIENT_VERSION, String.class, null);
             session.setClientVersion(clientVersion);
         }
+    }
 
+    private void configureHostKeyAlias(Session session) {
         if (containsKey(HOST_KEY_ALIAS)) {
             String hostKeyAlias = FileSystemProviderSupport.getValue(this, HOST_KEY_ALIAS, String.class, null);
             session.setHostKeyAlias(hostKeyAlias);
         }
+    }
 
+    private void configureServerAliveInterval(Session session) throws FileSystemException {
         if (containsKey(SERVER_ALIVE_INTERVAL)) {
             int interval = FileSystemProviderSupport.getIntValue(this, SERVER_ALIVE_INTERVAL);
             try {
@@ -629,6 +632,9 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
                 throw asFileSystemException(e);
             }
         }
+    }
+
+    private void configureServerAliveCountMax(Session session) {
         if (containsKey(SERVER_ALIVE_COUNT_MAX)) {
             int count = FileSystemProviderSupport.getIntValue(this, SERVER_ALIVE_COUNT_MAX);
             session.setServerAliveCountMax(count);
@@ -650,12 +656,31 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         }
     }
 
+    private void initialize(ChannelSftp channel) throws IOException {
+        try {
+            initializePreConnect(channel);
+            connect(channel);
+            initializePostConnect(channel);
+            verifyConnection(channel);
+        } catch (IOException e) {
+            channel.disconnect();
+            throw e;
+        }
+    }
+
     void initializePreConnect(ChannelSftp channel) throws IOException {
+        configureAgentForwarding(channel);
+        configureFilenameEncoding(channel);
+    }
+
+    private void configureAgentForwarding(ChannelSftp channel) {
         if (containsKey(AGENT_FORWARDING)) {
             boolean forwarding = FileSystemProviderSupport.getBooleanValue(this, AGENT_FORWARDING);
             channel.setAgentForwarding(forwarding);
         }
+    }
 
+    private void configureFilenameEncoding(ChannelSftp channel) throws FileSystemException {
         if (containsKey(FILENAME_ENCODING)) {
             Charset filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, Charset.class, null);
             try {
@@ -784,14 +809,14 @@ public class SFTPEnvironment implements Map<String, Object>, Cloneable {
         return map.toString();
     }
 
-    @Override
-    public SFTPEnvironment clone() {
-        try {
-            SFTPEnvironment clone = (SFTPEnvironment) super.clone();
-            clone.map = new HashMap<>(map);
-            return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    /**
+     * Copies a map to create a new {@link SFTPEnvironment} instance.
+     *
+     * @param env The map to copy. It can be an {@link SFTPEnvironment} instance, but does not have to be.
+     * @return A new {@link SFTPEnvironment} instance that is a copy of the given map.
+     * @since 3.0
+     */
+    public static SFTPEnvironment copy(Map<String, ?> env) {
+        return new SFTPEnvironment(new HashMap<>(env));
     }
 }

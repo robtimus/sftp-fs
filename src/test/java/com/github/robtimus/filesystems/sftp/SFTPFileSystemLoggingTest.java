@@ -18,18 +18,20 @@
 package com.github.robtimus.filesystems.sftp;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.matchesRegex;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
@@ -41,7 +43,6 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.varia.NullAppender;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -61,7 +62,7 @@ class SFTPFileSystemLoggingTest extends AbstractSFTPFileSystemTest {
 
     @BeforeAll
     static void setupLogging() {
-        logger = LogManager.getLogger(SFTPLoggerTest.class.getPackage().getName());
+        logger = LogManager.getLogger(SSHChannelPool.class.getPackage().getName());
         originalLevel = logger.getLevel();
         logger.setLevel(Level.TRACE);
         originalAppenders = getAllAppenders(logger);
@@ -110,52 +111,32 @@ class SFTPFileSystemLoggingTest extends AbstractSFTPFileSystemTest {
         try (SFTPFileSystem fs = newFileSystem(uri, createEnv())) {
             SFTPFileSystemProvider.keepAlive(fs);
         }
-        URI brokenUri;
-        try (ServerSocket serverSocket = new ServerSocket(0)) {
-            brokenUri = URI.create("sftp://localhost:" + serverSocket.getLocalPort());
-        }
-        assertThrows(IOException.class, () -> FileSystems.newFileSystem(brokenUri, createEnv()));
 
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(appender, atLeast(1)).doAppend(captor.capture());
-        List<Object> debugMessages = new ArrayList<>();
+        List<String> debugMessages = new ArrayList<>();
         Set<String> names = new HashSet<>();
         Set<Level> levels = new HashSet<>();
-        List<Throwable> thrown = new ArrayList<>();
         for (LoggingEvent event : captor.getAllValues()) {
             names.add(event.getLoggerName());
             levels.add(event.getLevel());
             if (Level.DEBUG.equals(event.getLevel())) {
-                debugMessages.add(event.getMessage());
-            }
-            if (event.getThrowableInformation() != null) {
-                thrown.add(event.getThrowableInformation().getThrowable());
+                String message = assertInstanceOf(String.class, event.getMessage());
+                debugMessages.add(message);
             }
         }
 
-        assertThat(names, contains(SSHChannelPool.class.getName()));
-        assertThat(levels, contains(Level.DEBUG));
+        assertEquals(Collections.singleton(SSHChannelPool.class.getName()), names);
+        assertEquals(Collections.singleton(Level.DEBUG), levels);
 
+        // Don't test all messages, that's all handled by the pool
+        // Just test the prefixes
         String hostname = uri.getHost();
         int port = uri.getPort();
-        if (port == -1) {
-            assertThat(debugMessages, hasItem("Creating SSHChannelPool to " + hostname + " with poolSize 1 and poolWaitTimeout 0"));
-            assertThat(debugMessages, hasItem("Created SSHChannelPool to " + hostname + " with poolSize 1"));
-        } else {
-            assertThat(debugMessages, hasItem("Creating SSHChannelPool to " + hostname + ":" + port + " with poolSize 1 and poolWaitTimeout 0"));
-            assertThat(debugMessages, hasItem("Created SSHChannelPool to " + hostname + ":" + port + " with poolSize 1"));
-        }
-        assertThat(debugMessages, hasItem("Failed to create SSHChannelPool, disconnecting all created channels"));
-        assertThat(debugMessages, hasItem(matchesRegex("Created new channel with id 'channel-\\d+' \\(pooled: true\\)")));
-        assertThat(debugMessages, hasItem(matchesRegex("Took channel 'channel-\\d+' from pool, current pool size: 0")));
-        assertThat(debugMessages, hasItem(matchesRegex("Reference count for channel 'channel-\\d+' increased to 1")));
-        assertThat(debugMessages, hasItem(matchesRegex("Reference count for channel 'channel-\\d+' decreased to 0")));
-        assertThat(debugMessages, hasItem(matchesRegex("Returned channel 'channel-\\d+' to pool, current pool size: 1")));
-        assertThat(debugMessages, hasItem("Drained pool for keep alive"));
-        assertThat(debugMessages, hasItem("Drained pool for close"));
-        assertThat(debugMessages, hasItem(matchesRegex("Disconnected channel 'channel-\\d+'")));
+        String prefix = port == -1 ? hostname : hostname + ":" + port;
+        assertThat(debugMessages, everyItem(startsWith(prefix + " - ")));
 
-        assertThat(thrown, contains(Matchers.<Throwable>instanceOf(IOException.class)));
+        assertThat(debugMessages, hasItem(matchesRegex(prefix + " - channel-\\d+ created")));
     }
 
     private SFTPFileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {

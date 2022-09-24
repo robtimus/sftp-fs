@@ -36,7 +36,6 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -103,8 +102,7 @@ class SFTPEnvironmentTest {
                 arguments("withAgentForwarding", "agentForwarding", false),
                 arguments("withFilenameEncoding", "filenameEncoding", StandardCharsets.UTF_8),
                 arguments("withDefaultDirectory", "defaultDir", "/"),
-                arguments("withClientConnectionCount", "clientConnectionCount", 5),
-                arguments("withClientConnectionWaitTimeout", "clientConnectionWaitTimeout", 1000L),
+                arguments("withPoolConfig", "poolConfig", SFTPPoolConfig.defaultConfig()),
                 arguments("withFileSystemExceptionFactory", "fileSystemExceptionFactory", DefaultFileSystemExceptionFactory.INSTANCE),
         };
         return Arrays.stream(arguments);
@@ -434,17 +432,6 @@ class SFTPEnvironmentTest {
         assertEquals(env.get(propertyName), method.invoke(session));
     }
 
-    @Test
-    void testWithClientConnectionWaitTimeoutWithUnit() {
-        SFTPEnvironment env = new SFTPEnvironment();
-
-        assertEquals(Collections.emptyMap(), env);
-
-        env.withClientConnectionWaitTimeout(1, TimeUnit.MINUTES);
-
-        assertEquals(Collections.singletonMap("clientConnectionWaitTimeout", 60_000L), env);
-    }
-
     private void initializeFully(SFTPEnvironment env) {
         env.withUsername(UUID.randomUUID().toString());
         env.withConnectTimeout(1000);
@@ -465,7 +452,7 @@ class SFTPEnvironmentTest {
         env.withAgentForwarding(false);
         env.withFilenameEncoding(StandardCharsets.UTF_8);
         env.withDefaultDirectory("/");
-        env.withClientConnectionCount(5);
+        env.withPoolConfig(SFTPPoolConfig.custom().withMaxSize(5).build());
         env.withFileSystemExceptionFactory(DefaultFileSystemExceptionFactory.INSTANCE);
     }
 

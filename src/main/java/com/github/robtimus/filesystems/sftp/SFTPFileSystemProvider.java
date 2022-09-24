@@ -89,7 +89,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         // user info must come from the environment map
         checkURI(uri, false, false);
 
-        SFTPEnvironment environment = wrapEnvironment(env);
+        SFTPEnvironment environment = SFTPEnvironment.copy(env);
 
         String username = environment.getUsername();
         URI normalizedURI = normalizeWithUsername(uri, username);
@@ -102,10 +102,6 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
             fileSystems.put(normalizedURI, fs);
             return fs;
         }
-    }
-
-    SFTPEnvironment wrapEnvironment(Map<String, ?> env) {
-        return SFTPEnvironment.wrap(env);
     }
 
     /**

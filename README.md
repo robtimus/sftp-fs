@@ -19,24 +19,11 @@ There are a few ways to provide credentials. The easiest way is to call [withUse
 
 If the [UserInfo](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/UserInfo.html) object will only provide a fixed password and do nothing else, you can also call [withPassword](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withPassword-char:A-) on the [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance instead. This too most likely requires a [HostKeyRepository](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/HostKeyRepository.html) to be set.
 
-Instead of using a password, it's also possible to use other authentication methods using an [IdentityRepository](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/IdentityRepository.html), which can be set by calling [withIdentityRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withIdentityRepository-com.jcraft.jsch.IdentityRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance. This may require additional dependencies. For example, to use pageant, you will need the following additional dependencies:
-
-    <dependency>
-      <groupId>com.jcraft</groupId>
-      <artifactId>jsch.agentproxy.jsch</artifactId>
-      <version>0.0.9</version>
-    </dependency>
-    <dependency>
-      <groupId>com.jcraft</groupId>
-      <artifactId>jsch.agentproxy.pageant</artifactId>
-      <version>0.0.9</version>
-    </dependency>
-
-The following code snippet shows how you can use pageant to authenticate:
+Instead of using a password, it's also possible to use other authentication methods using an [IdentityRepository](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/IdentityRepository.html), which can be set by calling [withIdentityRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withIdentityRepository-com.jcraft.jsch.IdentityRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance. The following code snippet shows how you can use pageant to authenticate:
 
     SFTPEnvironment env = new SFTPEnvironment()
             .withUsername(username)
-            .withIdentityRepository(new RemoteIdentityRepository(new PageantConnector()));
+            .withIdentityRepository(new AgentIdentityRepository(new PageantConnector()));
     FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
 
 ## Creating paths
@@ -82,13 +69,18 @@ To allow this behaviour to be modified, class [SFTPEnvironment](https://robtimus
 
 ## Thread safety
 
-The SFTP protocol is fundamentally not thread safe. To overcome this limitation, SFTP file systems maintain multiple connections to SFTP servers. The number of connections determines the number of concurrent operations that can be executed. If all connections are busy, a new operation will block until a connection becomes available. Class [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) has method [withClientConnectionCount](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withClientConnectionCount-int-) that allows you to specify the number of connections to use. If no connection count is explicitly set, the default will be `5`. It also has method [withClientConnectionWaitTimeout](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withClientConnectionWaitTimeout-long-) that can be used to control how long to wait before a connection is available. The default is `0` which means wait indefinitely.
+The SFTP protocol is fundamentally not thread safe. To overcome this limitation, SFTP file systems maintain multiple connections to SFTP servers. The number of connections determines the number of concurrent operations that can be executed. If all connections are busy, a new operation will block until a connection becomes available. Class [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) has method [withPoolConfig](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withPoolConfig-com.github.robtimus.filesystems.sftp.SFTPPoolConfig-) that allows you to configure the connection pool:
+
+* The initial pool size - the number of connections that are created when an SFTP file system is created. The default is `1`.
+* The maximum pool size - the maximum number of concurrent operations. The default is `5`.
+* The maximum wait time - this determines how long to wait until a connection is available. The default is to wait indefinitely.
+* The maximum time that connections can be idle. The default is indefinitely.
 
 When a stream or channel is opened for reading or writing, the connection will block because it will wait for the download or upload to finish. This will not occur until the stream or channel is closed. It is therefore advised to close streams and channels as soon as possible.
 
 ## Connection management
 
-Because SFTP file systems use multiple connections to an SFTP server, it's possible that one or more of these connections become stale. Class [SFTPFileSystemProvider](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPFileSystemProvider.html) has static method [keepAlive](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPFileSystemProvider.html#keepAlive-java.nio.file.FileSystem-) that, if given an instance of an SFTP file system, will send a keep-alive signal over each of its idle connections. You should ensure that this method is called on a regular interval.
+Because SFTP file systems use multiple connections to an SFTP server, it's possible that one or more of these connections become stale. Class [SFTPFileSystemProvider](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPFileSystemProvider.html) has static method [keepAlive](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPFileSystemProvider.html#keepAlive-java.nio.file.FileSystem-) that, if given an instance of an SFTP file system, will send a keep-alive signal over each of its idle connections. You should ensure that this method is called on a regular interval. An alternative is to set a maximum idle time (see [Thread safety](#thread-safety)).
 
 ## Limitations
 

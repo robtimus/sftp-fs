@@ -22,7 +22,7 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.4.3</version>
+    <version>1.5</version>
     <relativePath />
   </parent>
 
@@ -72,6 +72,7 @@
   <properties>
     <version.fs-core>2.0.2</version.fs-core>
     <version.jsch>0.2.4</version.jsch>
+    <version.simple-pool>1.0</version.simple-pool>
     <version.sshd-sftp>2.8.0</version.sshd-sftp>
   </properties>
 
@@ -89,9 +90,9 @@
     </dependency>
 
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <optional>true</optional>
+      <groupId>com.github.robtimus</groupId>
+      <artifactId>simple-pool</artifactId>
+      <version>${version.simple-pool}</version>
     </dependency>
 
     <dependency>
@@ -109,7 +110,6 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
-      <version>${version.mockito}</version>
       <scope>test</scope>
     </dependency>
 
@@ -123,7 +123,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-reload4j</artifactId>
-      <version>${version.slf4j}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

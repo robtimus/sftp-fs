@@ -161,8 +161,8 @@ abstract class AbstractSFTPFileSystemTest {
         return (SFTPFileSystem) new SFTPFileSystemProvider().newFileSystem(URI.create("sftp://localhost:" + port), env);
     }
 
-    private static SFTPFileSystem createFileSystem(int clientConnectionCount) throws IOException {
-        Map<String, ?> env = createEnv().withClientConnectionCount(clientConnectionCount);
+    private static SFTPFileSystem createFileSystem(int maxSize) throws IOException {
+        Map<String, ?> env = createEnv().withPoolConfig(SFTPPoolConfig.custom().withMaxSize(maxSize).build());
         return (SFTPFileSystem) new SFTPFileSystemProvider().newFileSystem(URI.create("sftp://localhost:" + port), env);
     }
 
@@ -172,7 +172,7 @@ abstract class AbstractSFTPFileSystemTest {
                 .withUserInfo(new SimpleUserInfo(PASSWORD.toCharArray()))
                 .withHostKeyRepository(TrustAllHostKeyRepository.INSTANCE)
                 .withDefaultDirectory(defaultDir.getFileName().toString())
-                .withClientConnectionCount(1)
+                .withPoolConfig(SFTPPoolConfig.custom().withMaxSize(1).build())
                 .withFileSystemExceptionFactory(exceptionFactory);
     }
 

@@ -101,8 +101,8 @@ class SFTPMessagesTest {
     }
 
     private static void collectParameters(List<Arguments> parameters, Class<?> cls, Object instance, String path) {
-        for (Method method : cls.getMethods()) {
-            if (method.getDeclaringClass() != Object.class) {
+        for (Method method : cls.getDeclaredMethods()) {
+            if (!Modifier.isPrivate(method.getModifiers())) {
                 String methodPath = path + "." + method.getName();
                 parameters.add(arguments(methodPath, method, instance));
 

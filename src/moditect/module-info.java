@@ -1,7 +1,7 @@
 module com.github.robtimus.filesystems.sftp {
     requires com.github.robtimus.filesystems;
     requires transitive com.jcraft.jsch;
-    requires static org.slf4j;
+    requires com.github.robtimus.pool;
 
     exports com.github.robtimus.filesystems.sftp;
 

@@ -27,7 +27,6 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.sftp.SSHChannelPool.Channel;
 
@@ -39,8 +38,11 @@ class SSHChannelPoolTest extends AbstractSFTPFileSystemTest {
 
         URI uri = getURI();
         SFTPEnvironment env = createEnv()
-                .withClientConnectionCount(clientCount)
-                .withClientConnectionWaitTimeout(500, TimeUnit.MILLISECONDS);
+                .withPoolConfig(SFTPPoolConfig.custom()
+                        .withMaxSize(clientCount)
+                        .withMaxWaitTime(Duration.ofMillis(500))
+                        .build()
+                );
 
         SSHChannelPool pool = new SSHChannelPool(uri.getHost(), uri.getPort(), env);
         List<Channel> channels = new ArrayList<>();
