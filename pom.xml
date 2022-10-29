@@ -70,7 +70,7 @@
   </issueManagement>
 
   <properties>
-    <version.fs-core>2.0.2</version.fs-core>
+    <version.fs-core>2.1</version.fs-core>
     <version.jsch>0.2.4</version.jsch>
     <version.simple-pool>1.0</version.simple-pool>
     <version.sshd-sftp>2.8.0</version.sshd-sftp>

@@ -17,6 +17,8 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.filesystems.sftp.SFTPFileSystemProvider.normalizeWithUsername;
+import static com.github.robtimus.filesystems.sftp.SFTPFileSystemProvider.normalizeWithoutPassword;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -92,9 +94,9 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     @Test
     void testPathsAndFilesSupportFileSystemNotFound() {
         URI uri = URI.create("sftp://sftp.github.com/");
-        FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class,
-                () -> Paths.get(uri));
-        assertEquals(uri.toString(), exception.getMessage());
+        FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> Paths.get(uri));
+        assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
+        assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
     }
 
     // SFTPFileSystemProvider.removeFileSystem
@@ -104,8 +106,9 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         addDirectory("/foo/bar");
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+        SFTPEnvironment environment = createEnv();
         URI uri;
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+        try (SFTPFileSystem fs = newFileSystem(provider, environment)) {
             SFTPPath path = new SFTPPath(fs, "/foo/bar");
 
             uri = path.toUri();
@@ -113,7 +116,8 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             assertFalse(provider.isHidden(path));
         }
         FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
-        assertEquals(uri.toString(), exception.getMessage());
+        assertEquals(normalizeWithUsername(uri, environment.getUsername()).toString(), exception.getMessage());
+        assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
     }
 
     // SFTPFileSystemProvider.getPath
@@ -166,7 +170,8 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         URI uri = URI.create("sftp://sftp.github.com/");
         FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
-        assertEquals(uri.toString(), exception.getMessage());
+        assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
+        assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
     }
 
     // SFTPFileSystemProvider.isSameFile

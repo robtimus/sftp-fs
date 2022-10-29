@@ -28,7 +28,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -48,10 +47,10 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import com.github.robtimus.filesystems.FileSystemMap;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
 
@@ -62,7 +61,7 @@ import com.github.robtimus.filesystems.URISupport;
  */
 public class SFTPFileSystemProvider extends FileSystemProvider {
 
-    private final Map<URI, SFTPFileSystem> fileSystems = new HashMap<>();
+    private final FileSystemMap<SFTPFileSystem> fileSystems = new FileSystemMap<>(this::createFileSystem);
 
     /**
      * Returns the URI scheme that identifies this provider: {@code sftp}.
@@ -70,6 +69,11 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     @Override
     public String getScheme() {
         return "sftp"; //$NON-NLS-1$
+    }
+
+    private SFTPFileSystem createFileSystem(URI uri, Map<String, ?> env) throws IOException {
+        SFTPEnvironment environment = (SFTPEnvironment) env;
+        return new SFTPFileSystem(this, uri, environment);
     }
 
     /**
@@ -84,7 +88,6 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      * as the closed file system.
      */
     @Override
-    @SuppressWarnings("resource")
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
         // user info must come from the environment map
         checkURI(uri, false, false);
@@ -93,15 +96,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
 
         String username = environment.getUsername();
         URI normalizedURI = normalizeWithUsername(uri, username);
-        synchronized (fileSystems) {
-            if (fileSystems.containsKey(normalizedURI)) {
-                throw new FileSystemAlreadyExistsException(normalizedURI.toString());
-            }
-
-            SFTPFileSystem fs = new SFTPFileSystem(this, normalizedURI, environment);
-            fileSystems.put(normalizedURI, fs);
-            return fs;
-        }
+        return fileSystems.add(normalizedURI, environment);
     }
 
     /**
@@ -139,13 +134,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
 
     private SFTPFileSystem getExistingFileSystem(URI uri) {
         URI normalizedURI = normalizeWithoutPassword(uri);
-        synchronized (fileSystems) {
-            SFTPFileSystem fs = fileSystems.get(normalizedURI);
-            if (fs == null) {
-                throw new FileSystemNotFoundException(uri.toString());
-            }
-            return fs;
-        }
+        return fileSystems.get(normalizedURI);
     }
 
     private void checkURI(URI uri, boolean allowUserInfo, boolean allowPath) {
@@ -172,15 +161,12 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    @SuppressWarnings("resource")
     void removeFileSystem(URI uri) {
         URI normalizedURI = normalizeWithoutPassword(uri);
-        synchronized (fileSystems) {
-            fileSystems.remove(normalizedURI);
-        }
+        fileSystems.remove(normalizedURI);
     }
 
-    private URI normalizeWithoutPassword(URI uri) {
+    static URI normalizeWithoutPassword(URI uri) {
         String userInfo = uri.getUserInfo();
         if (userInfo == null && uri.getPath() == null && uri.getQuery() == null && uri.getFragment() == null) {
             // nothing to normalize, return the URI
@@ -195,7 +181,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         return URISupport.create(uri.getScheme(), username, uri.getHost(), uri.getPort(), null, null, null);
     }
 
-    private URI normalizeWithUsername(URI uri, String username) {
+    static URI normalizeWithUsername(URI uri, String username) {
         if (username == null && uri.getUserInfo() == null && uri.getPath() == null && uri.getQuery() == null && uri.getFragment() == null) {
             // nothing to normalize or add, return the URI
             return uri;
