@@ -22,7 +22,7 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.5</version>
+    <version>1.6</version>
     <relativePath />
   </parent>
 
@@ -72,8 +72,10 @@
   <properties>
     <version.fs-core>2.1</version.fs-core>
     <version.jsch>0.2.4</version.jsch>
+    <version.junit-support>2.1</version.junit-support>
     <version.simple-pool>1.0</version.simple-pool>
-    <version.sshd-sftp>2.8.0</version.sshd-sftp>
+    <version.slf4j>1.7.36</version.slf4j>
+    <version.sshd-sftp>2.9.2</version.sshd-sftp>
   </properties>
 
   <dependencies>
@@ -114,6 +116,13 @@
     </dependency>
 
     <dependency>
+      <groupId>com.github.robtimus</groupId>
+      <artifactId>junit-support</artifactId>
+      <version>${version.junit-support}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.sshd</groupId>
       <artifactId>sshd-sftp</artifactId>
       <version>${version.sshd-sftp}</version>
@@ -123,6 +132,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-reload4j</artifactId>
+      <version>${version.slf4j}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
