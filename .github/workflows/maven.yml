@@ -13,7 +13,14 @@
 # limitations under the License.
 
 name: Maven
-on: [push, pull_request]
+
+on:
+  workflow_dispatch:
+  push:
+    # only run for branches, not tags
+    branches: ["**"]
+  pull_request:
+
 jobs:
   build:
     runs-on: ${{matrix.os}}
