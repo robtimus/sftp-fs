@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
   push:
     # only run for branches, not tags
-    branches: ["**"]
+    branches: ['**']
   pull_request:
 
 jobs:
