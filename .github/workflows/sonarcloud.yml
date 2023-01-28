@@ -24,6 +24,7 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    concurrency: sonar-${{ github.head_ref || github.ref_name }}
     steps:
       - uses: actions/checkout@v3
         with:
