@@ -1,4 +1,9 @@
 # sftp-fs
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.robtimus/sftp-fs)](https://search.maven.org/artifact/com.github.robtimus/sftp-fs)
+[![Build Status](https://github.com/robtimus/sftp-fs/actions/workflows/build.yml/badge.svg)](https://github.com/robtimus/sftp-fs/actions/workflows/build.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Asftp-fs&metric=alert_status)](https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Asftp-fs)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=com.github.robtimus%3Asftp-fs&metric=coverage)](https://sonarcloud.io/summary/overall?id=com.github.robtimus%3Asftp-fs)
+[![Known Vulnerabilities](https://snyk.io/test/github/robtimus/sftp-fs/badge.svg)](https://snyk.io/test/github/robtimus/sftp-fs)
 
 The `sftp-fs` library provides support for SFTP NIO.2 file systems, allowing SFTP servers to be accessed in a similar way to local file systems.
 

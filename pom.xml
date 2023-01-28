@@ -22,7 +22,7 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.6</version>
+    <version>1.8</version>
     <relativePath />
   </parent>
 
@@ -138,20 +138,6 @@
   </dependencies>
 
   <build>
-    <resources>
-      <!-- add LICENSE.txt to META-INF besides the main resources -->
-      <resource>
-        <directory>src/main/resources</directory>
-      </resource>
-      <resource>
-        <directory>${project.basedir}</directory>
-        <targetPath>META-INF</targetPath>
-        <includes>
-          <include>LICENSE.txt</include>
-        </includes>
-      </resource>
-    </resources>
-
     <pluginManagement>
       <plugins>
         <plugin>
@@ -210,8 +196,8 @@
       </plugin>
 
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
+        <groupId>com.github.robtimus</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
       </plugin>
 
       <plugin>
@@ -286,6 +272,7 @@
             <configuration>
               <!-- Allow JUnit to fully access the test classes -->
               <argLine>
+                @{argLine}
                 --add-opens com.github.robtimus.filesystems.sftp/com.github.robtimus.filesystems.sftp=ALL-UNNAMED
                 --add-opens com.jcraft.jsch/com.jcraft.jsch=com.github.robtimus.filesystems.sftp
                 --add-modules org.slf4j
