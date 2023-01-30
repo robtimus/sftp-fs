@@ -146,9 +146,13 @@
           <configuration>
             <links>
               <link>https://robtimus.github.io/fs-core/apidocs/</link>
-              <!-- https://github.com/mwiede/jsch has no javadoc available yet -->
-              <link>https://epaul.github.io/jsch-documentation/javadoc/</link>
             </links>
+            <offlineLinks>
+              <offlineLink>
+                <url>https://javadoc.io/doc/com.github.mwiede/jsch/${version.jsch}/com.jcraft.jsch/</url>
+                <location>${project.basedir}/src/main/apidocs/com.github.mwiede/jsch</location>
+              </offlineLink>
+            </offlineLinks>
           </configuration>
         </plugin>
       </plugins>
