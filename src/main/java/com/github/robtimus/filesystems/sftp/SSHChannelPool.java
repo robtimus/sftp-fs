@@ -105,17 +105,17 @@ final class SSHChannelPool {
 
     final class Channel extends PoolableObject<IOException> implements Closeable {
 
-        private final ChannelSftp channel;
+        private final ChannelSftp channelSftp;
 
         private Channel() throws IOException {
-            channel = env.openChannel(jsch, hostname, port);
+            channelSftp = env.openChannel(jsch, hostname, port);
         }
 
         @Override
         protected boolean validate() {
-            if (channel.isConnected()) {
+            if (channelSftp.isConnected()) {
                 try {
-                    channel.getSession().sendKeepAliveMsg();
+                    channelSftp.getSession().sendKeepAliveMsg();
                     return true;
                 } catch (@SuppressWarnings("unused") Exception e) {
                     // the keep alive failed - let the pool call releaseResources
@@ -126,9 +126,9 @@ final class SSHChannelPool {
 
         @Override
         protected void releaseResources() throws IOException {
-            channel.disconnect();
+            channelSftp.disconnect();
             try {
-                channel.getSession().disconnect();
+                channelSftp.getSession().disconnect();
             } catch (JSchException e) {
                 throw asIOException(e);
             }
@@ -141,7 +141,7 @@ final class SSHChannelPool {
 
         String pwd() throws IOException {
             try {
-                return channel.pwd();
+                return channelSftp.pwd();
             } catch (SftpException e) {
                 throw asIOException(e);
             }
@@ -151,7 +151,7 @@ final class SSHChannelPool {
             assert options.read;
 
             try {
-                InputStream in = channel.get(path);
+                InputStream in = channelSftp.get(path);
                 in = new SFTPInputStream(path, in, options.deleteOnClose);
                 addReference(in);
                 return in;
@@ -239,7 +239,7 @@ final class SSHChannelPool {
 
             int mode = options.append ? ChannelSftp.APPEND : ChannelSftp.OVERWRITE;
             try {
-                OutputStream out = channel.put(path, mode);
+                OutputStream out = channelSftp.put(path, mode);
                 out = new SFTPOutputStream(path, out, options.deleteOnClose);
                 addReference(out);
                 return out;
@@ -304,7 +304,7 @@ final class SSHChannelPool {
 
         void storeFile(String path, InputStream local, Collection<? extends OpenOption> openOptions) throws IOException {
             try {
-                channel.put(local, path);
+                channelSftp.put(local, path);
             } catch (SftpException e) {
                 throw exceptionFactory.createNewOutputStreamException(path, e, openOptions);
             }
@@ -312,7 +312,7 @@ final class SSHChannelPool {
 
         SftpATTRS readAttributes(String path, boolean followLinks) throws IOException {
             try {
-                return followLinks ? channel.stat(path) : channel.lstat(path);
+                return followLinks ? channelSftp.stat(path) : channelSftp.lstat(path);
             } catch (SftpException e) {
                 throw exceptionFactory.createGetFileException(path, e);
             }
@@ -320,7 +320,7 @@ final class SSHChannelPool {
 
         String readSymbolicLink(String path) throws IOException {
             try {
-                return channel.readlink(path);
+                return channelSftp.readlink(path);
             } catch (SftpException e) {
                 throw exceptionFactory.createReadLinkException(path, e);
             }
@@ -333,7 +333,7 @@ final class SSHChannelPool {
                 return LsEntrySelector.CONTINUE;
             };
             try {
-                channel.ls(path, selector);
+                channelSftp.ls(path, selector);
             } catch (SftpException e) {
                 throw exceptionFactory.createListFilesException(path, e);
             }
@@ -342,7 +342,7 @@ final class SSHChannelPool {
 
         void mkdir(String path) throws IOException {
             try {
-                channel.mkdir(path);
+                channelSftp.mkdir(path);
             } catch (SftpException e) {
                 if (fileExists(path)) {
                     throw new FileAlreadyExistsException(path);
@@ -353,7 +353,7 @@ final class SSHChannelPool {
 
         private boolean fileExists(String path) {
             try {
-                channel.stat(path);
+                channelSftp.stat(path);
                 return true;
             } catch (@SuppressWarnings("unused") SftpException e) {
                 // the file actually may exist, but throw the original exception instead
@@ -364,9 +364,9 @@ final class SSHChannelPool {
         void delete(String path, boolean isDirectory) throws IOException {
             try {
                 if (isDirectory) {
-                    channel.rmdir(path);
+                    channelSftp.rmdir(path);
                 } else {
-                    channel.rm(path);
+                    channelSftp.rm(path);
                 }
             } catch (SftpException e) {
                 throw exceptionFactory.createDeleteException(path, e, isDirectory);
@@ -375,7 +375,7 @@ final class SSHChannelPool {
 
         void rename(String source, String target) throws IOException {
             try {
-                channel.rename(source, target);
+                channelSftp.rename(source, target);
             } catch (SftpException e) {
                 throw exceptionFactory.createMoveException(source, target, e);
             }
@@ -383,7 +383,7 @@ final class SSHChannelPool {
 
         void chown(String path, int uid) throws IOException {
             try {
-                channel.chown(uid, path);
+                channelSftp.chown(uid, path);
             } catch (SftpException e) {
                 throw exceptionFactory.createSetOwnerException(path, e);
             }
@@ -391,7 +391,7 @@ final class SSHChannelPool {
 
         void chgrp(String path, int gid) throws IOException {
             try {
-                channel.chgrp(gid, path);
+                channelSftp.chgrp(gid, path);
             } catch (SftpException e) {
                 throw exceptionFactory.createSetGroupException(path, e);
             }
@@ -399,7 +399,7 @@ final class SSHChannelPool {
 
         void chmod(String path, int permissions) throws IOException {
             try {
-                channel.chmod(permissions, path);
+                channelSftp.chmod(permissions, path);
             } catch (SftpException e) {
                 throw exceptionFactory.createSetPermissionsException(path, e);
             }
@@ -407,7 +407,7 @@ final class SSHChannelPool {
 
         void setMtime(String path, long mtime) throws IOException {
             try {
-                channel.setMtime(path, (int) mtime);
+                channelSftp.setMtime(path, (int) mtime);
             } catch (SftpException e) {
                 throw exceptionFactory.createSetModificationTimeException(path, e);
             }
@@ -415,7 +415,7 @@ final class SSHChannelPool {
 
         SftpStatVFS statVFS(String path) throws IOException {
             try {
-                return channel.statVFS(path);
+                return channelSftp.statVFS(path);
             } catch (SftpException e) {
                 if (e.id == ChannelSftp.SSH_FX_OP_UNSUPPORTED) {
                     throw new UnsupportedOperationException(e);

@@ -68,6 +68,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
 import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
@@ -1208,9 +1210,11 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         addDirectory("/baz");
         addFile("/baz/qux");
 
+        SFTPPath source = createPath("/baz");
+        SFTPPath target = createPath("/foo/bar");
         CopyOption[] options = { StandardCopyOption.COPY_ATTRIBUTES };
-        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
-                () -> fileSystem.copy(createPath("/baz"), createPath("/foo/bar"), options));
+
+        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> fileSystem.copy(source, target, options));
         assertEquals(Messages.fileSystemProvider().unsupportedCopyOption(StandardCopyOption.COPY_ATTRIBUTES).getMessage(), exception.getMessage());
     }
 
@@ -1825,85 +1829,130 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
     // SFTPFileSystem.readAttributes (map variant)
 
-    @Test
-    void testReadAttributesMapNoTypeLastModifiedTime() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "lastModifiedTime, basic:lastModifiedTime",
+            "basic:lastModifiedTime, basic:lastModifiedTime",
+            "posix:lastModifiedTime, posix:lastModifiedTime"
+    })
+    void testReadAttributesMapLastModifiedTime(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "lastModifiedTime");
-        assertEquals(Collections.singleton("basic:lastModifiedTime"), attributes.keySet());
-        assertNotNull(attributes.get("basic:lastModifiedTime"));
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        assertEquals(Collections.singleton(expectedKey), attributes.keySet());
+        assertNotNull(attributes.get(expectedKey));
     }
 
-    @Test
-    void testReadAttributesMapNoTypeLastAccessTime() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "lastAccessTime, basic:lastAccessTime",
+            "basic:lastAccessTime, basic:lastAccessTime",
+            "posix:lastAccessTime, posix:lastAccessTime"
+    })
+    void testReadAttributesMapLastAccessTime(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "lastAccessTime");
-        assertEquals(Collections.singleton("basic:lastAccessTime"), attributes.keySet());
-        assertNotNull(attributes.get("basic:lastAccessTime"));
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        assertEquals(Collections.singleton(expectedKey), attributes.keySet());
+        assertNotNull(attributes.get(expectedKey));
     }
 
-    @Test
-    void testReadAttributesMapNoTypeCreateTime() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "creationTime, basic:creationTime",
+            "basic:creationTime, basic:creationTime",
+            "posix:creationTime, posix:creationTime"
+    })
+    void testReadAttributesMapCreateTime(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "creationTime");
-        assertEquals(Collections.singleton("basic:creationTime"), attributes.keySet());
-        assertNotNull(attributes.get("basic:creationTime"));
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        assertEquals(Collections.singleton(expectedKey), attributes.keySet());
+        assertNotNull(attributes.get(expectedKey));
     }
 
-    @Test
-    void testReadAttributesMapNoTypeBasicSize() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "size, basic:size",
+            "basic:size, basic:size",
+            "posix:size, posix:size"
+    })
+    void testReadAttributesMapSize(String attributeName, String expectedKey) throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "size");
-        Map<String, ?> expected = Collections.singletonMap("basic:size", Files.size(foo));
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        Map<String, ?> expected = Collections.singletonMap(expectedKey, Files.size(foo));
         assertEquals(expected, attributes);
     }
 
-    @Test
-    void testReadAttributesMapNoTypeIsRegularFile() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "isRegularFile, basic:isRegularFile",
+            "basic:isRegularFile, basic:isRegularFile",
+            "posix:isRegularFile, posix:isRegularFile"
+    })
+    void testReadAttributesMapIsRegularFile(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isRegularFile");
-        Map<String, ?> expected = Collections.singletonMap("basic:isRegularFile", false);
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        Map<String, ?> expected = Collections.singletonMap(expectedKey, false);
         assertEquals(expected, attributes);
     }
 
-    @Test
-    void testReadAttributesMapNoTypeIsDirectory() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "isDirectory, basic:isDirectory",
+            "basic:isDirectory, basic:isDirectory",
+            "posix:isDirectory, posix:isDirectory"
+    })
+    void testReadAttributesMapIsDirectory(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isDirectory");
-        Map<String, ?> expected = Collections.singletonMap("basic:isDirectory", true);
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        Map<String, ?> expected = Collections.singletonMap(expectedKey, true);
         assertEquals(expected, attributes);
     }
 
-    @Test
-    void testReadAttributesMapNoTypeIsSymbolicLink() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "isSymbolicLink, basic:isSymbolicLink",
+            "basic:isSymbolicLink, basic:isSymbolicLink",
+            "posix:isSymbolicLink, posix:isSymbolicLink"
+    })
+    void testReadAttributesMapIsSymbolicLink(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isSymbolicLink");
-        Map<String, ?> expected = Collections.singletonMap("basic:isSymbolicLink", false);
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        Map<String, ?> expected = Collections.singletonMap(expectedKey, false);
         assertEquals(expected, attributes);
     }
 
-    @Test
-    void testReadAttributesMapNoTypeIsOther() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "isOther, basic:isOther",
+            "basic:isOther, basic:isOther",
+            "posix:isOther, posix:isOther"
+    })
+    void testReadAttributesMapIsOther(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "isOther");
-        Map<String, ?> expected = Collections.singletonMap("basic:isOther", false);
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        Map<String, ?> expected = Collections.singletonMap(expectedKey, false);
         assertEquals(expected, attributes);
     }
 
-    @Test
-    void testReadAttributesMapNoTypeFileKey() throws IOException {
+    @ParameterizedTest(name = "{0} -> {1}")
+    @CsvSource({
+            "fileKey, basic:fileKey",
+            "basic:fileKey, basic:fileKey",
+            "posix:fileKey, posix:fileKey"
+    })
+    void testReadAttributesMapFileKey(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "fileKey");
-        Map<String, ?> expected = Collections.singletonMap("basic:fileKey", null);
+        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), attributeName);
+        Map<String, ?> expected = Collections.singletonMap(expectedKey, null);
         assertEquals(expected, attributes);
     }
 
@@ -1982,88 +2031,6 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     @Test
-    void testReadAttributesMapBasicLastModifiedTime() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:lastModifiedTime");
-        assertEquals(Collections.singleton("basic:lastModifiedTime"), attributes.keySet());
-        assertNotNull(attributes.get("basic:lastModifiedTime"));
-    }
-
-    @Test
-    void testReadAttributesMapBasicLastAccessTime() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:lastAccessTime");
-        assertEquals(Collections.singleton("basic:lastAccessTime"), attributes.keySet());
-        assertNotNull(attributes.get("basic:lastAccessTime"));
-    }
-
-    @Test
-    void testReadAttributesMapBasicCreateTime() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:creationTime");
-        assertEquals(Collections.singleton("basic:creationTime"), attributes.keySet());
-        assertNotNull(attributes.get("basic:creationTime"));
-    }
-
-    @Test
-    void testReadAttributesMapBasicSize() throws IOException {
-        Path foo = addFile("/foo");
-        setContents(foo, new byte[1024]);
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:size");
-        Map<String, ?> expected = Collections.singletonMap("basic:size", Files.size(foo));
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapBasicIsRegularFile() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isRegularFile");
-        Map<String, ?> expected = Collections.singletonMap("basic:isRegularFile", false);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapBasicIsDirectory() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isDirectory");
-        Map<String, ?> expected = Collections.singletonMap("basic:isDirectory", true);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapBasicIsSymbolicLink() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isSymbolicLink");
-        Map<String, ?> expected = Collections.singletonMap("basic:isSymbolicLink", false);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapBasicIsOther() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:isOther");
-        Map<String, ?> expected = Collections.singletonMap("basic:isOther", false);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapBasicFileKey() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "basic:fileKey");
-        Map<String, ?> expected = Collections.singletonMap("basic:fileKey", null);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
     void testReadAttributesMapBasicMultipleForDirectory() throws IOException {
         addDirectory("/foo");
 
@@ -2134,88 +2101,6 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertNotNull(attributes.remove("basic:lastModifiedTime"));
         assertNotNull(attributes.remove("basic:lastAccessTime"));
         assertNotNull(attributes.remove("basic:creationTime"));
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapPosixLastModifiedTime() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:lastModifiedTime");
-        assertEquals(Collections.singleton("posix:lastModifiedTime"), attributes.keySet());
-        assertNotNull(attributes.get("posix:lastModifiedTime"));
-    }
-
-    @Test
-    void testReadAttributesMapPosixLastAccessTime() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:lastAccessTime");
-        assertEquals(Collections.singleton("posix:lastAccessTime"), attributes.keySet());
-        assertNotNull(attributes.get("posix:lastAccessTime"));
-    }
-
-    @Test
-    void testReadAttributesMapPosixCreateTime() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:creationTime");
-        assertEquals(Collections.singleton("posix:creationTime"), attributes.keySet());
-        assertNotNull(attributes.get("posix:creationTime"));
-    }
-
-    @Test
-    void testReadAttributesMapPosixSize() throws IOException {
-        Path foo = addFile("/foo");
-        setContents(foo, new byte[1024]);
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:size");
-        Map<String, ?> expected = Collections.singletonMap("posix:size", Files.size(foo));
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapPosixIsRegularFile() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isRegularFile");
-        Map<String, ?> expected = Collections.singletonMap("posix:isRegularFile", false);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapPosixIsDirectory() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isDirectory");
-        Map<String, ?> expected = Collections.singletonMap("posix:isDirectory", true);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapPosixIsSymbolicLink() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isSymbolicLink");
-        Map<String, ?> expected = Collections.singletonMap("posix:isSymbolicLink", false);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapPosixIsOther() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:isOther");
-        Map<String, ?> expected = Collections.singletonMap("posix:isOther", false);
-        assertEquals(expected, attributes);
-    }
-
-    @Test
-    void testReadAttributesMapPosixFileKey() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = fileSystem.readAttributes(createPath("/foo"), "posix:fileKey");
-        Map<String, ?> expected = Collections.singletonMap("posix:fileKey", null);
         assertEquals(expected, attributes);
     }
 
@@ -2358,8 +2243,10 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     void testReadAttributesMapUnsupportedAttribute() throws IOException {
         addDirectory("/foo");
 
+        SFTPPath path = createPath("/foo");
+
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> fileSystem.readAttributes(createPath("/foo"), "posix:lastModifiedTime,owner,dummy"));
+                () -> fileSystem.readAttributes(path, "posix:lastModifiedTime,owner,dummy"));
         assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("dummy").getMessage(), exception.getMessage());
     }
 
@@ -2367,8 +2254,9 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     void testReadAttributesMapUnsupportedType() throws IOException {
         addDirectory("/foo");
 
-        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
-                () -> fileSystem.readAttributes(createPath("/foo"), "zipfs:*"));
+        SFTPPath path = createPath("/foo");
+
+        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> fileSystem.readAttributes(path, "zipfs:*"));
         assertEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs").getMessage(), exception.getMessage());
     }
 
@@ -2482,8 +2370,10 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     void testSetAttributeUnsupportedAttribute() throws IOException {
         addDirectory("/foo");
 
+        SFTPPath path = createPath("/foo");
+
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> fileSystem.setAttribute(createPath("/foo"), "basic:creationTime", true));
+                () -> fileSystem.setAttribute(path, "basic:creationTime", true));
         assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("basic:creationTime").getMessage(), exception.getMessage());
     }
 
@@ -2491,8 +2381,10 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     void testSetAttributeUnsupportedType() throws IOException {
         addDirectory("/foo");
 
+        SFTPPath path = createPath("/foo");
+
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
-                () -> fileSystem.setAttribute(createPath("/foo"), "zipfs:size", true));
+                () -> fileSystem.setAttribute(path, "zipfs:size", true));
         assertEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs").getMessage(), exception.getMessage());
     }
 
@@ -2500,7 +2392,9 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     void testSetAttributeInvalidValueType() throws IOException {
         addDirectory("/foo");
 
-        assertThrows(ClassCastException.class, () -> fileSystem.setAttribute(createPath("/foo"), "basic:lastModifiedTime", 1));
+        SFTPPath path = createPath("/foo");
+
+        assertThrows(ClassCastException.class, () -> fileSystem.setAttribute(path, "basic:lastModifiedTime", 1));
     }
 
     // SFTPFileSystem.getTotalSpace

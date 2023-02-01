@@ -210,11 +210,9 @@ class SFTPFileSystemDirectoryStreamTest extends AbstractSFTPFileSystemTest {
             throw new IOException();
         };
         try (DirectoryStream<Path> stream = fileSystem.newDirectoryStream(createPath("/"), filter)) {
-            DirectoryIteratorException exception = assertThrows(DirectoryIteratorException.class, () -> {
-                for (Iterator<Path> iterator = stream.iterator(); iterator.hasNext(); ) {
-                    iterator.next();
-                }
-            });
+            Iterator<Path> iterator = stream.iterator();
+            // hasNext already uses the filter, and therefore already causes the exception to be thrown
+            DirectoryIteratorException exception = assertThrows(DirectoryIteratorException.class, iterator::hasNext);
             assertThat(exception.getCause(), instanceOf(IOException.class));
         }
     }
