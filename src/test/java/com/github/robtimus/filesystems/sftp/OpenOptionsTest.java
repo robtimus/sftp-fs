@@ -277,20 +277,36 @@ class OpenOptionsTest {
             assertFalse(options.createNew);
             assertTrue(options.deleteOnClose);
         }
-    }
 
-    @Test
-    void testForNewInputStreamWithInvalid() {
-        testForNewInputStreamWithInvalid(StandardOpenOption.WRITE);
-        testForNewInputStreamWithInvalid(StandardOpenOption.APPEND);
-        testForNewInputStreamWithInvalid(StandardOpenOption.TRUNCATE_EXISTING);
-        testForNewInputStreamWithInvalid(StandardOpenOption.CREATE);
-        testForNewInputStreamWithInvalid(StandardOpenOption.CREATE_NEW);
-    }
+        @Test
+        void testWithWrite() {
+            testWithInvalid(StandardOpenOption.WRITE);
+        }
 
-    private void testForNewInputStreamWithInvalid(OpenOption option) {
-        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewInputStream(option));
-        assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+        @Test
+        void testWithAppend() {
+            testWithInvalid(StandardOpenOption.APPEND);
+        }
+
+        @Test
+        void testWithTruncateExisting() {
+            testWithInvalid(StandardOpenOption.TRUNCATE_EXISTING);
+        }
+
+        @Test
+        void testWithCreate() {
+            testWithInvalid(StandardOpenOption.CREATE);
+        }
+
+        @Test
+        void testWithCreateNew() {
+            testWithInvalid(StandardOpenOption.CREATE_NEW);
+        }
+
+        private void testWithInvalid(OpenOption option) {
+            UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewInputStream(option));
+            assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+        }
     }
 
     @Nested
@@ -662,26 +678,26 @@ class OpenOptionsTest {
             assertTrue(options.createNew);
             assertFalse(options.deleteOnClose);
         }
-    }
 
-    @Test
-    void testForNewOutputStreamWithInvalid() {
-        testForNewOutputStreamWithInvalid(StandardOpenOption.READ);
-    }
+        @Test
+        void testWithRead() {
+            testWithInvalid(StandardOpenOption.READ);
+        }
 
-    private void testForNewOutputStreamWithInvalid(OpenOption option) {
-        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewOutputStream(option));
-        assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
-    }
+        private void testWithInvalid(OpenOption option) {
+            UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewOutputStream(option));
+            assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+        }
 
-    @Test
-    void testForNewOutputStreamWithIllegalCombinations() {
-        testForNewOutputStreamWithIllegalCombination(StandardOpenOption.APPEND, StandardOpenOption.TRUNCATE_EXISTING);
-    }
+        @Test
+        void testWithAppendAndTruncateExisting() {
+            testWithIllegalCombination(StandardOpenOption.APPEND, StandardOpenOption.TRUNCATE_EXISTING);
+        }
 
-    private void testForNewOutputStreamWithIllegalCombination(OpenOption... options) {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> OpenOptions.forNewOutputStream(options));
-        assertEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options).getMessage(), exception.getMessage());
+        private void testWithIllegalCombination(OpenOption... options) {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> OpenOptions.forNewOutputStream(options));
+            assertEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options).getMessage(), exception.getMessage());
+        }
     }
 
     @Nested
@@ -817,30 +833,39 @@ class OpenOptionsTest {
             assertFalse(options.createNew);
             assertFalse(options.deleteOnClose);
         }
-    }
 
-    @Test
-    void testForNewByteChannelWithInvalid() {
-        testForNewByteChannelInvalid(DummyOption.DUMMY);
-    }
+        @Test
+        void testWithUnsupported() {
+            testWithUnsupported(DummyOption.DUMMY);
+        }
 
-    private void testForNewByteChannelInvalid(OpenOption option) {
-        Set<OpenOption> openOptions = Collections.singleton(option);
-        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewByteChannel(openOptions));
-        assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
-    }
+        private void testWithUnsupported(OpenOption option) {
+            Set<OpenOption> openOptions = Collections.singleton(option);
+            UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
+                    () -> OpenOptions.forNewByteChannel(openOptions));
+            assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+        }
 
-    @Test
-    void testForNewByteChannelWithIllegalCombinations() {
-        testForNewByteChannelWithIllegalCombination(StandardOpenOption.READ, StandardOpenOption.WRITE);
-        testForNewByteChannelWithIllegalCombination(StandardOpenOption.READ, StandardOpenOption.APPEND);
-        testForNewByteChannelWithIllegalCombination(StandardOpenOption.APPEND, StandardOpenOption.TRUNCATE_EXISTING);
-    }
+        @Test
+        void testWithReadAndWrite() {
+            testWithIllegalCombination(StandardOpenOption.READ, StandardOpenOption.WRITE);
+        }
 
-    private void testForNewByteChannelWithIllegalCombination(StandardOpenOption... options) {
-        Set<StandardOpenOption> openOptions = EnumSet.of(options[0], options);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> OpenOptions.forNewByteChannel(openOptions));
-        assertEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options).getMessage(), exception.getMessage());
+        @Test
+        void testWithReadAndAppend() {
+            testWithIllegalCombination(StandardOpenOption.READ, StandardOpenOption.APPEND);
+        }
+
+        @Test
+        void testWithAppendAndTruncateExisting() {
+            testWithIllegalCombination(StandardOpenOption.APPEND, StandardOpenOption.TRUNCATE_EXISTING);
+        }
+
+        private void testWithIllegalCombination(StandardOpenOption... options) {
+            Set<StandardOpenOption> openOptions = EnumSet.of(options[0], options);
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> OpenOptions.forNewByteChannel(openOptions));
+            assertEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options).getMessage(), exception.getMessage());
+        }
     }
 
     enum DummyOption implements OpenOption {
