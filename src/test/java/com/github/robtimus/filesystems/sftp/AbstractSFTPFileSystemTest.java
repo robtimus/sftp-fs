@@ -224,8 +224,12 @@ abstract class AbstractSFTPFileSystemTest {
         return URI.create("sftp://localhost:" + port);
     }
 
+    protected final SFTPFileSystemProvider provider() {
+        return fileSystem.provider();
+    }
+
     protected final SFTPPath createPath(String path) {
-        return new SFTPPath(sftpFileSystem, path);
+        return new SFTPPath(fileSystem, path);
     }
 
     protected final SFTPPath createPath(SFTPFileSystem fs, String path) {

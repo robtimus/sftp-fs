@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import com.github.robtimus.filesystems.FileSystemMap;
+import com.github.robtimus.filesystems.LinkOptionSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
 
@@ -317,13 +318,16 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
         Objects.requireNonNull(type);
         if (type == BasicFileAttributeView.class) {
-            return type.cast(new AttributeView("basic", toSFTPPath(path))); //$NON-NLS-1$
+            boolean followLinks = LinkOptionSupport.followLinks(options);
+            return type.cast(new AttributeView("basic", toSFTPPath(path), followLinks)); //$NON-NLS-1$
         }
         if (type == FileOwnerAttributeView.class) {
-            return type.cast(new AttributeView("owner", toSFTPPath(path))); //$NON-NLS-1$
+            boolean followLinks = LinkOptionSupport.followLinks(options);
+            return type.cast(new AttributeView("owner", toSFTPPath(path), followLinks)); //$NON-NLS-1$
         }
         if (type == PosixFileAttributeView.class) {
-            return type.cast(new AttributeView("posix", toSFTPPath(path))); //$NON-NLS-1$
+            boolean followLinks = LinkOptionSupport.followLinks(options);
+            return type.cast(new AttributeView("posix", toSFTPPath(path), followLinks)); //$NON-NLS-1$
         }
         return null;
     }
@@ -332,10 +336,12 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
 
         private final String name;
         private final SFTPPath path;
+        private final boolean followLinks;
 
-        private AttributeView(String name, SFTPPath path) {
+        private AttributeView(String name, SFTPPath path, boolean followLinks) {
             this.name = Objects.requireNonNull(name);
             this.path = Objects.requireNonNull(path);
+            this.followLinks = followLinks;
         }
 
         @Override
@@ -350,27 +356,27 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
 
         @Override
         public PosixFileAttributes readAttributes() throws IOException {
-            return path.readAttributes();
+            return path.readAttributes(followLinks);
         }
 
         @Override
         public void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
-            path.setTimes(lastModifiedTime, lastAccessTime, createTime);
+            path.setTimes(lastModifiedTime, lastAccessTime, createTime, followLinks);
         }
 
         @Override
         public void setOwner(UserPrincipal owner) throws IOException {
-            path.setOwner(owner);
+            path.setOwner(owner, followLinks);
         }
 
         @Override
         public void setGroup(GroupPrincipal group) throws IOException {
-            path.setGroup(group);
+            path.setGroup(group, followLinks);
         }
 
         @Override
         public void setPermissions(Set<PosixFilePermission> perms) throws IOException {
-            path.setPermissions(perms);
+            path.setPermissions(perms, followLinks);
         }
     }
 
@@ -384,7 +390,8 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     @Override
     public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
         if (type == BasicFileAttributes.class || type == PosixFileAttributes.class) {
-            return type.cast(toSFTPPath(path).readAttributes(options));
+            boolean followLinks = LinkOptionSupport.followLinks(options);
+            return type.cast(toSFTPPath(path).readAttributes(followLinks));
         }
         throw Messages.fileSystemProvider().unsupportedFileAttributesType(type);
     }
@@ -398,7 +405,8 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      */
     @Override
     public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        return toSFTPPath(path).readAttributes(attributes, options);
+        boolean followLinks = LinkOptionSupport.followLinks(options);
+        return toSFTPPath(path).readAttributes(attributes, followLinks);
     }
 
     /**
@@ -413,7 +421,8 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      */
     @Override
     public void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        toSFTPPath(path).setAttribute(attribute, value, options);
+        boolean followLinks = LinkOptionSupport.followLinks(options);
+        toSFTPPath(path).setAttribute(attribute, value, followLinks);
     }
 
     private static SFTPPath toSFTPPath(Path path) {

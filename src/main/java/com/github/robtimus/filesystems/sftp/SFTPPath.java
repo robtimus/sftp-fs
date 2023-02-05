@@ -43,6 +43,7 @@ import java.nio.file.attribute.UserPrincipal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import com.github.robtimus.filesystems.LinkOptionSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.SimpleAbstractPath;
 
@@ -142,7 +143,8 @@ class SFTPPath extends SimpleAbstractPath {
 
     @Override
     public SFTPPath toRealPath(LinkOption... options) throws IOException {
-        return fs.toRealPath(this, options);
+        boolean followLinks = LinkOptionSupport.followLinks(options);
+        return fs.toRealPath(this, followLinks);
     }
 
     @Override
@@ -214,32 +216,32 @@ class SFTPPath extends SimpleAbstractPath {
         fs.checkAccess(this, modes);
     }
 
-    PosixFileAttributes readAttributes(LinkOption... options) throws IOException {
-        return fs.readAttributes(this, options);
+    PosixFileAttributes readAttributes(boolean followLinks) throws IOException {
+        return fs.readAttributes(this, followLinks);
     }
 
-    Map<String, Object> readAttributes(String attributes, LinkOption... options) throws IOException {
-        return fs.readAttributes(this, attributes, options);
+    Map<String, Object> readAttributes(String attributes, boolean followLinks) throws IOException {
+        return fs.readAttributes(this, attributes, followLinks);
     }
 
-    void setOwner(UserPrincipal owner) throws IOException {
-        fs.setOwner(this, owner);
+    void setOwner(UserPrincipal owner, boolean followLinks) throws IOException {
+        fs.setOwner(this, owner, followLinks);
     }
 
-    void setGroup(GroupPrincipal group) throws IOException {
-        fs.setGroup(this, group);
+    void setGroup(GroupPrincipal group, boolean followLinks) throws IOException {
+        fs.setGroup(this, group, followLinks);
     }
 
-    void setPermissions(Set<PosixFilePermission> permissions) throws IOException {
-        fs.setPermissions(this, permissions);
+    void setPermissions(Set<PosixFilePermission> permissions, boolean followLinks) throws IOException {
+        fs.setPermissions(this, permissions, followLinks);
     }
 
-    void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
-        fs.setTimes(this, lastModifiedTime, lastAccessTime, createTime);
+    void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime, boolean followLinks) throws IOException {
+        fs.setTimes(this, lastModifiedTime, lastAccessTime, createTime, followLinks);
     }
 
-    void setAttribute(String attribute, Object value, LinkOption... options) throws IOException {
-        fs.setAttribute(this, attribute, value, options);
+    void setAttribute(String attribute, Object value, boolean followLinks) throws IOException {
+        fs.setAttribute(this, attribute, value, followLinks);
     }
 
     long getTotalSpace() throws IOException {

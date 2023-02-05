@@ -31,7 +31,6 @@ import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
-import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.OpenOption;
@@ -46,7 +45,6 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
-import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,7 +59,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import com.github.robtimus.filesystems.AbstractDirectoryStream;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
-import com.github.robtimus.filesystems.LinkOptionSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.PathMatcherSupport;
 import com.github.robtimus.filesystems.URISupport;
@@ -113,7 +110,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     @Override
-    public FileSystemProvider provider() {
+    public SFTPFileSystemProvider provider() {
         return provider;
     }
 
@@ -201,8 +198,7 @@ class SFTPFileSystem extends FileSystem {
         return new SFTPPath(this, defaultDirectory + "/" + path.path()); //$NON-NLS-1$
     }
 
-    SFTPPath toRealPath(SFTPPath path, LinkOption... options) throws IOException {
-        boolean followLinks = LinkOptionSupport.followLinks(options);
+    SFTPPath toRealPath(SFTPPath path, boolean followLinks) throws IOException {
         try (Channel channel = channelPool.get()) {
             return toRealPath(channel, path, followLinks).path;
         }
@@ -582,8 +578,7 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    PosixFileAttributes readAttributes(SFTPPath path, LinkOption... options) throws IOException {
-        boolean followLinks = LinkOptionSupport.followLinks(options);
+    PosixFileAttributes readAttributes(SFTPPath path, boolean followLinks) throws IOException {
         try (Channel channel = channelPool.get()) {
             SftpATTRS attributes = getAttributes(channel, path, followLinks);
             return new SFTPPathFileAttributes(attributes);
@@ -678,8 +673,7 @@ class SFTPFileSystem extends FileSystem {
             "posix:isRegularFile", "posix:isDirectory", "posix:isSymbolicLink", "posix:isOther", "posix:fileKey",
             "posix:owner", "posix:group", "posix:permissions")));
 
-    Map<String, Object> readAttributes(SFTPPath path, String attributes, LinkOption... options) throws IOException {
-
+    Map<String, Object> readAttributes(SFTPPath path, String attributes, boolean followLinks) throws IOException {
         String view;
         int pos = attributes.indexOf(':');
         if (pos == -1) {
@@ -706,7 +700,7 @@ class SFTPFileSystem extends FileSystem {
 
         Map<String, Object> result = getAttributeMap(attributes, allowedAttributes);
 
-        PosixFileAttributes posixAttributes = readAttributes(path, options);
+        PosixFileAttributes posixAttributes = readAttributes(path, followLinks);
 
         for (Map.Entry<String, Object> entry : result.entrySet()) {
             switch (entry.getKey()) {
@@ -787,11 +781,7 @@ class SFTPFileSystem extends FileSystem {
         return result;
     }
 
-    void setOwner(SFTPPath path, UserPrincipal owner) throws IOException {
-        setOwner(path, owner, false);
-    }
-
-    private void setOwner(SFTPPath path, UserPrincipal owner, boolean followLinks) throws IOException {
+    void setOwner(SFTPPath path, UserPrincipal owner, boolean followLinks) throws IOException {
         try {
             int uid = Integer.parseInt(owner.getName());
             try (Channel channel = channelPool.get()) {
@@ -805,11 +795,7 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    void setGroup(SFTPPath path, GroupPrincipal group) throws IOException {
-        setGroup(path, group, false);
-    }
-
-    private void setGroup(SFTPPath path, GroupPrincipal group, boolean followLinks) throws IOException {
+    void setGroup(SFTPPath path, GroupPrincipal group, boolean followLinks) throws IOException {
         try {
             int gid = Integer.parseInt(group.getName());
             try (Channel channel = channelPool.get()) {
@@ -823,11 +809,7 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    void setPermissions(SFTPPath path, Set<PosixFilePermission> permissions) throws IOException {
-        setPermissions(path, permissions, false);
-    }
-
-    private void setPermissions(SFTPPath path, Set<PosixFilePermission> permissions, boolean followLinks) throws IOException {
+    void setPermissions(SFTPPath path, Set<PosixFilePermission> permissions, boolean followLinks) throws IOException {
         try (Channel channel = channelPool.get()) {
             if (followLinks) {
                 path = toRealPath(channel, path, followLinks).path;
@@ -836,7 +818,7 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    void setTimes(SFTPPath path, FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
+    void setTimes(SFTPPath path, FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime, boolean followLinks) throws IOException {
         if (lastAccessTime != null) {
             throw new IOException(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime")); //$NON-NLS-1$
         }
@@ -844,7 +826,7 @@ class SFTPFileSystem extends FileSystem {
             throw new IOException(Messages.fileSystemProvider().unsupportedFileAttribute("createAccessTime")); //$NON-NLS-1$
         }
         if (lastModifiedTime != null) {
-            setLastModifiedTime(path, lastModifiedTime, false);
+            setLastModifiedTime(path, lastModifiedTime, followLinks);
         }
     }
 
@@ -858,7 +840,7 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    void setAttribute(SFTPPath path, String attribute, Object value, LinkOption... options) throws IOException {
+    void setAttribute(SFTPPath path, String attribute, Object value, boolean followLinks) throws IOException {
         String view;
         int pos = attribute.indexOf(':');
         if (pos == -1) {
@@ -870,8 +852,6 @@ class SFTPFileSystem extends FileSystem {
         if (!"basic".equals(view) && !"owner".equals(view) && !"posix".equals(view)) { //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             throw Messages.fileSystemProvider().unsupportedFileAttributeView(view);
         }
-
-        boolean followLinks = LinkOptionSupport.followLinks(options);
 
         switch (attribute) {
             case "basic:lastModifiedTime": //$NON-NLS-1$
