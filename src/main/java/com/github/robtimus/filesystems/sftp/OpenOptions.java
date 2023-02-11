@@ -61,7 +61,7 @@ final class OpenOptions {
 
     static OpenOptions forNewInputStream(Collection<? extends OpenOption> options) {
         if (options.isEmpty()) {
-            return new OpenOptions(true, false, false, false, false, false, Collections.<OpenOption>emptySet());
+            return new OpenOptions(true, false, false, false, false, false, Collections.emptySet());
         }
 
         boolean deleteOnClose = false;
@@ -84,7 +84,7 @@ final class OpenOptions {
     static OpenOptions forNewOutputStream(Collection<? extends OpenOption> options) {
         if (options.isEmpty()) {
             // CREATE, TRUNCATE_EXISTING and WRITE, i.e. create, not createNew, and not append
-            return new OpenOptions(false, true, false, true, false, false, Collections.<OpenOption>emptySet());
+            return new OpenOptions(false, true, false, true, false, false, Collections.emptySet());
         }
 
         boolean append = false;

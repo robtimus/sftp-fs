@@ -119,8 +119,8 @@ class SFTPFileSystem extends FileSystem {
         this.provider = Objects.requireNonNull(provider);
 
         SFTPPath rootPath = new SFTPPath(this, ROOT_PATH);
-        this.rootDirectories = Collections.<Path>singleton(rootPath);
-        this.fileStores = Collections.<FileStore>singleton(new SFTPFileStore(rootPath));
+        this.rootDirectories = Collections.singleton(rootPath);
+        this.fileStores = Collections.singleton(new SFTPFileStore(rootPath));
 
         this.channelPool = new SSHChannelPool(uri.getHost(), uri.getPort(), env);
         this.uri = Objects.requireNonNull(uri);
