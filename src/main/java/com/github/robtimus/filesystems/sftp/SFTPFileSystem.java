@@ -891,4 +891,12 @@ class SFTPFileSystem extends FileSystem {
             return Long.MAX_VALUE;
         }
     }
+
+    long getBlockSize(SFTPPath path) throws IOException {
+        try (Channel channel = channelPool.get()) {
+            // Propagate any UnsupportedOperationException, as that's allowed to be thrown
+            SftpStatVFS stat = channel.statVFS(path.path());
+            return stat.getBlockSize();
+        }
+    }
 }

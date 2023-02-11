@@ -76,6 +76,10 @@ class SFTPFileStore extends FileStore {
         return path.getUnallocatedSpace();
     }
 
+    public long getBlockSize() throws IOException {
+        return path.getBlockSize();
+    }
+
     @Override
     public boolean supportsFileAttributeView(Class<? extends FileAttributeView> type) {
         return type == BasicFileAttributeView.class || type == FileOwnerAttributeView.class || type == PosixFileAttributeView.class;

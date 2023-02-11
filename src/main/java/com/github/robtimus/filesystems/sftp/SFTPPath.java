@@ -240,4 +240,8 @@ class SFTPPath extends SimpleAbstractPath {
     long getUnallocatedSpace() throws IOException {
         return fs.getUnallocatedSpace(this);
     }
+
+    long getBlockSize() throws IOException {
+        return fs.getBlockSize(this);
+    }
 }
