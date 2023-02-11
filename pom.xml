@@ -195,6 +195,27 @@
       </plugin>
 
       <plugin>
+        <groupId>com.github.robtimus</groupId>
+        <artifactId>i18n-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <bundleName>com.github.robtimus.filesystems.sftp.fs</bundleName>
+              <className>com.github.robtimus.filesystems.sftp.SFTPMessages</className>
+              <licenseText>Apache-2.0</licenseText>
+              <licenseCopyrightHolder>Rob Spoor</licenseCopyrightHolder>
+              <licenseCopyrightYear>2023</licenseCopyrightYear>
+              <publicVisibility>false</publicVisibility>
+              <suppressWarnings>nls</suppressWarnings>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.moditect</groupId>
         <artifactId>moditect-maven-plugin</artifactId>
       </plugin>

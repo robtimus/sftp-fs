@@ -172,7 +172,7 @@ final class SSHChannelPool {
                 this.path = path;
                 this.in = in;
                 this.deleteOnClose = deleteOnClose;
-                logEvent(() -> SFTPMessages.createdInputStream(path));
+                logEvent(() -> SFTPMessages.log.createdInputStream(path));
             }
 
             @Override
@@ -214,7 +214,7 @@ final class SSHChannelPool {
                     if (deleteOnClose) {
                         delete(path, false);
                     }
-                    logEvent(() -> SFTPMessages.closedInputStream(path));
+                    logEvent(() -> SFTPMessages.log.closedInputStream(path));
                 }
             }
 
@@ -260,7 +260,7 @@ final class SSHChannelPool {
                 this.path = path;
                 this.out = out;
                 this.deleteOnClose = deleteOnClose;
-                logEvent(() -> SFTPMessages.createdOutputStream(path));
+                logEvent(() -> SFTPMessages.log.createdOutputStream(path));
             }
 
             @Override
@@ -297,7 +297,7 @@ final class SSHChannelPool {
                     if (deleteOnClose) {
                         delete(path, false);
                     }
-                    logEvent(() -> SFTPMessages.closedOutputStream(path));
+                    logEvent(() -> SFTPMessages.log.closedOutputStream(path));
                 }
             }
         }
