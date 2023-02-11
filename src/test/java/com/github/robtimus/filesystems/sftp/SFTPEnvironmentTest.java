@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
 import java.net.Socket;
 import java.nio.charset.Charset;
@@ -43,11 +44,13 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.ConfigRepository;
 import com.jcraft.jsch.HostKey;
 import com.jcraft.jsch.HostKeyRepository;
 import com.jcraft.jsch.IdentityRepository;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.OpenSSHConfig;
 import com.jcraft.jsch.Proxy;
 import com.jcraft.jsch.ProxyHTTP;
 import com.jcraft.jsch.Session;
@@ -57,6 +60,16 @@ import com.jcraft.jsch.UserInfo;
 
 @SuppressWarnings("nls")
 class SFTPEnvironmentTest {
+
+    private static final ConfigRepository CONFIG_REPOSITORY = createConfigRepository();
+
+    private static ConfigRepository createConfigRepository() {
+        try {
+            return OpenSSHConfig.parse("Host=localhost");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     private Method findMethod(String methodName, Class<?> propertyType) {
         for (Method method : SFTPEnvironment.class.getMethods()) {
@@ -99,6 +112,7 @@ class SFTPEnvironmentTest {
                 arguments("withIdentities", "identities", Collections.singletonList(IdentityTest.fromFiles())),
                 arguments("withHostKeyRepository", "hostKeyRepository", new TestHostKeyRepository()),
                 arguments("withKnownHosts", "knownHosts", new File("known_hosts")),
+                arguments("withConfigRepository", "configRepository", CONFIG_REPOSITORY),
                 arguments("withAgentForwarding", "agentForwarding", false),
                 arguments("withFilenameEncoding", "filenameEncoding", StandardCharsets.UTF_8),
                 arguments("withDefaultDirectory", "defaultDir", "/"),
@@ -192,6 +206,7 @@ class SFTPEnvironmentTest {
         IdentityTest.assertIdentityFromFilesAdded(jsch);
         verify(jsch).setHostKeyRepository((HostKeyRepository) env.get("hostKeyRepository"));
         verify(jsch).setKnownHosts(((File) env.get("knownHosts")).getAbsolutePath());
+        verify(jsch).setConfigRepository((ConfigRepository) env.get("configRepository"));
         verifyNoMoreInteractions(jsch);
     }
 
@@ -449,6 +464,7 @@ class SFTPEnvironmentTest {
         env.withIdentity(IdentityTest.fromFiles());
         env.withHostKeyRepository(new TestHostKeyRepository());
         env.withKnownHosts(new File("known_hosts"));
+        env.withConfigRepository(CONFIG_REPOSITORY);
         env.withAgentForwarding(false);
         env.withFilenameEncoding(StandardCharsets.UTF_8);
         env.withDefaultDirectory("/");

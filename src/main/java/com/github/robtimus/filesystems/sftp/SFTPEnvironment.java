@@ -38,6 +38,7 @@ import java.util.Set;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.ConfigRepository;
 import com.jcraft.jsch.HostKeyRepository;
 import com.jcraft.jsch.IdentityRepository;
 import com.jcraft.jsch.JSch;
@@ -69,6 +70,7 @@ public class SFTPEnvironment implements Map<String, Object> {
     private static final String IDENTITIES = "identities"; //$NON-NLS-1$
     private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
     private static final String KNOWN_HOSTS = "knownHosts"; //$NON-NLS-1$
+    private static final String CONFIG_REPOSITORY = "configRepository"; //$NON-NLS-1$
 
     // Session
 
@@ -386,6 +388,18 @@ public class SFTPEnvironment implements Map<String, Object> {
     }
 
     /**
+     * Stores the config repository touse.
+     *
+     * @param repository The config repository to use.
+     * @return This object.
+     * @since 3.1
+     */
+    public SFTPEnvironment withConfigRepository(ConfigRepository repository) {
+        put(CONFIG_REPOSITORY, repository);
+        return this;
+    }
+
+    /**
      * Stores whether or not agent forwarding should be enabled.
      *
      * @param agentForwarding {@code true} to enable strict agent forwarding, or {@code false} to disable it.
@@ -474,6 +488,7 @@ public class SFTPEnvironment implements Map<String, Object> {
 
         configureHostKeyRepository(jsch);
         configureKnownHosts(jsch);
+        configureConfigRepository(jsch);
     }
 
     private void configureIdentityRepository(JSch jsch) {
@@ -516,6 +531,13 @@ public class SFTPEnvironment implements Map<String, Object> {
             } catch (JSchException e) {
                 throw asFileSystemException(e);
             }
+        }
+    }
+
+    private void configureConfigRepository(JSch jsch) {
+        if (containsKey(CONFIG_REPOSITORY)) {
+            ConfigRepository repository = FileSystemProviderSupport.getValue(this, CONFIG_REPOSITORY, ConfigRepository.class, null);
+            jsch.setConfigRepository(repository);
         }
     }
 
