@@ -17,6 +17,8 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.spy;
 import java.io.ByteArrayOutputStream;
@@ -47,12 +49,14 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.session.ServerSession;
+import org.apache.sshd.sftp.server.SftpEventListener;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -76,6 +80,8 @@ abstract class AbstractSFTPFileSystemTest {
     private static ExceptionFactoryWrapper exceptionFactory;
     private static SFTPFileSystem sftpFileSystem;
     private static SFTPFileSystem sftpFileSystem2;
+
+    private static CapturingSftpEventListener eventListener = new CapturingSftpEventListener();
 
     protected final SFTPFileSystem fileSystem = sftpFileSystem;
     protected final SFTPFileSystem fileSystem2 = sftpFileSystem2;
@@ -112,6 +118,8 @@ abstract class AbstractSFTPFileSystemTest {
     protected static void setupClass(SftpSubsystemFactory subSystemFactory) throws NoSuchAlgorithmException, IOException {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         KeyPair keyPair = generator.generateKeyPair();
+
+        subSystemFactory.addSftpEventListener(eventListener);
 
         port = findFreePort();
 
@@ -181,6 +189,8 @@ abstract class AbstractSFTPFileSystemTest {
         Files.createDirectories(defaultDir);
 
         exceptionFactory.delegate = spy(DefaultFileSystemExceptionFactory.INSTANCE);
+
+        eventListener.modifiedAttributes.clear();
     }
 
     @AfterEach
@@ -355,6 +365,14 @@ abstract class AbstractSFTPFileSystemTest {
         return size;
     }
 
+    protected final void assertAttributesModified(Path path, Map<String, ?> expected) {
+        Map<String, ?> modified = eventListener.modifiedAttributes.get(path.toAbsolutePath().toString());
+
+        assertNotNull(modified);
+        assertEquals(expected, modified);
+        //expected.forEach((key, value) -> assertThat(modified, hasEntry(key, value)));
+    }
+
     private static class ExceptionFactoryWrapper implements FileSystemExceptionFactory {
 
         private FileSystemExceptionFactory delegate;
@@ -427,6 +445,18 @@ abstract class AbstractSFTPFileSystemTest {
         @Override
         public FileSystemException createSetModificationTimeException(String file, SftpException exception) {
             return delegate.createSetModificationTimeException(file, exception);
+        }
+    }
+
+    private static final class CapturingSftpEventListener implements SftpEventListener {
+
+        private final Map<String, Map<String, ?>> modifiedAttributes = new HashMap<>();
+
+        @Override
+        public void modifiedAttributes(ServerSession session, Path path, Map<String, ?> attrs, Throwable thrown) throws IOException {
+            if (attrs != null) {
+                modifiedAttributes.put(path.toAbsolutePath().toString(), new HashMap<>(attrs));
+            }
         }
     }
 }

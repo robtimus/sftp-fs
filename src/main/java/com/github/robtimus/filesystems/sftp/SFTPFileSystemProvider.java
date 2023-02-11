@@ -41,11 +41,8 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.FileTime;
-import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Map;
 import java.util.Objects;
@@ -317,67 +314,8 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     @Override
     public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
         Objects.requireNonNull(type);
-        if (type == BasicFileAttributeView.class) {
-            boolean followLinks = LinkOptionSupport.followLinks(options);
-            return type.cast(new AttributeView("basic", toSFTPPath(path), followLinks)); //$NON-NLS-1$
-        }
-        if (type == FileOwnerAttributeView.class) {
-            boolean followLinks = LinkOptionSupport.followLinks(options);
-            return type.cast(new AttributeView("owner", toSFTPPath(path), followLinks)); //$NON-NLS-1$
-        }
-        if (type == PosixFileAttributeView.class) {
-            boolean followLinks = LinkOptionSupport.followLinks(options);
-            return type.cast(new AttributeView("posix", toSFTPPath(path), followLinks)); //$NON-NLS-1$
-        }
-        return null;
-    }
-
-    private static final class AttributeView implements PosixFileAttributeView {
-
-        private final String name;
-        private final SFTPPath path;
-        private final boolean followLinks;
-
-        private AttributeView(String name, SFTPPath path, boolean followLinks) {
-            this.name = Objects.requireNonNull(name);
-            this.path = Objects.requireNonNull(path);
-            this.followLinks = followLinks;
-        }
-
-        @Override
-        public String name() {
-            return name;
-        }
-
-        @Override
-        public UserPrincipal getOwner() throws IOException {
-            return readAttributes().owner();
-        }
-
-        @Override
-        public PosixFileAttributes readAttributes() throws IOException {
-            return path.readAttributes(followLinks);
-        }
-
-        @Override
-        public void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
-            path.setTimes(lastModifiedTime, lastAccessTime, createTime, followLinks);
-        }
-
-        @Override
-        public void setOwner(UserPrincipal owner) throws IOException {
-            path.setOwner(owner, followLinks);
-        }
-
-        @Override
-        public void setGroup(GroupPrincipal group) throws IOException {
-            path.setGroup(group, followLinks);
-        }
-
-        @Override
-        public void setPermissions(Set<PosixFilePermission> perms) throws IOException {
-            path.setPermissions(perms, followLinks);
-        }
+        boolean followLinks = LinkOptionSupport.followLinks(options);
+        return toSFTPPath(path).getFileAttributeView(type, followLinks);
     }
 
     /**

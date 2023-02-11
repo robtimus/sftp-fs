@@ -57,6 +57,8 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.DosFileAttributes;
+import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.GroupPrincipal;
 import java.nio.file.attribute.PosixFileAttributeView;
@@ -75,7 +77,9 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.github.robtimus.filesystems.Messages;
+import com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata;
 import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
 import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
 import com.jcraft.jsch.SftpException;
@@ -1961,15 +1965,31 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertEquals("/foo", exception.getFile());
     }
 
+    @Test
+    void testReadAttributesUnsupportedType() {
+        SFTPFileSystemProvider provider = provider();
+        SFTPPath path = createPath("/foo");
+        Class<? extends BasicFileAttributes> type = DosFileAttributes.class;
+
+        UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> provider.readAttributes(path, type));
+        assertEquals(Messages.fileSystemProvider().unsupportedFileAttributesType(type).getMessage(), exception.getMessage());
+    }
+
     // SFTPFileSystem.readAttributes (map variant)
 
-    @ParameterizedTest(name = "{0} -> {1}")
+    @ParameterizedTest(name = "{0}")
     @CsvSource({
-            "lastModifiedTime, basic:lastModifiedTime",
-            "basic:lastModifiedTime, basic:lastModifiedTime",
-            "posix:lastModifiedTime, posix:lastModifiedTime"
+            "lastModifiedTime, lastModifiedTime",
+            "basic:lastModifiedTime, lastModifiedTime",
+            "posix:lastModifiedTime, lastModifiedTime",
+            "lastAccessTime, lastAccessTime",
+            "basic:lastAccessTime, lastAccessTime",
+            "posix:lastAccessTime, lastAccessTime",
+            "creationTime, creationTime",
+            "basic:creationTime, creationTime",
+            "posix:creationTime, creationTime"
     })
-    void testReadAttributesMapLastModifiedTime(String attributeName, String expectedKey) throws IOException {
+    void testReadAttributesMap(String attributeName, String expectedKey) throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
@@ -1977,116 +1997,64 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertNotNull(attributes.get(expectedKey));
     }
 
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "lastAccessTime, basic:lastAccessTime",
-            "basic:lastAccessTime, basic:lastAccessTime",
-            "posix:lastAccessTime, posix:lastAccessTime"
-    })
-    void testReadAttributesMapLastAccessTime(String attributeName, String expectedKey) throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        assertEquals(Collections.singleton(expectedKey), attributes.keySet());
-        assertNotNull(attributes.get(expectedKey));
-    }
-
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "creationTime, basic:creationTime",
-            "basic:creationTime, basic:creationTime",
-            "posix:creationTime, posix:creationTime"
-    })
-    void testReadAttributesMapCreateTime(String attributeName, String expectedKey) throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        assertEquals(Collections.singleton(expectedKey), attributes.keySet());
-        assertNotNull(attributes.get(expectedKey));
-    }
-
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "size, basic:size",
-            "basic:size, basic:size",
-            "posix:size, posix:size"
-    })
-    void testReadAttributesMapSize(String attributeName, String expectedKey) throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "size", "basic:size", "posix:size" })
+    void testReadAttributesMapSize(String attributeName) throws IOException {
         Path foo = addFile("/foo");
         setContents(foo, new byte[1024]);
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        Map<String, ?> expected = Collections.singletonMap(expectedKey, Files.size(foo));
+        Map<String, ?> expected = Collections.singletonMap("size", Files.size(foo));
         assertEquals(expected, attributes);
     }
 
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "isRegularFile, basic:isRegularFile",
-            "basic:isRegularFile, basic:isRegularFile",
-            "posix:isRegularFile, posix:isRegularFile"
-    })
-    void testReadAttributesMapIsRegularFile(String attributeName, String expectedKey) throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "isRegularFile", "basic:isRegularFile", "posix:isRegularFile" })
+    void testReadAttributesMapIsRegularFile(String attributeName) throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        Map<String, ?> expected = Collections.singletonMap(expectedKey, false);
+        Map<String, ?> expected = Collections.singletonMap("isRegularFile", false);
         assertEquals(expected, attributes);
     }
 
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "isDirectory, basic:isDirectory",
-            "basic:isDirectory, basic:isDirectory",
-            "posix:isDirectory, posix:isDirectory"
-    })
-    void testReadAttributesMapIsDirectory(String attributeName, String expectedKey) throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "isDirectory", "basic:isDirectory", "posix:isDirectory" })
+    void testReadAttributesMapIsDirectory(String attributeName) throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        Map<String, ?> expected = Collections.singletonMap(expectedKey, true);
+        Map<String, ?> expected = Collections.singletonMap("isDirectory", true);
         assertEquals(expected, attributes);
     }
 
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "isSymbolicLink, basic:isSymbolicLink",
-            "basic:isSymbolicLink, basic:isSymbolicLink",
-            "posix:isSymbolicLink, posix:isSymbolicLink"
-    })
-    void testReadAttributesMapIsSymbolicLink(String attributeName, String expectedKey) throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "isSymbolicLink", "basic:isSymbolicLink", "posix:isSymbolicLink" })
+    void testReadAttributesMapIsSymbolicLink(String attributeName) throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        Map<String, ?> expected = Collections.singletonMap(expectedKey, false);
+        Map<String, ?> expected = Collections.singletonMap("isSymbolicLink", false);
         assertEquals(expected, attributes);
     }
 
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "isOther, basic:isOther",
-            "basic:isOther, basic:isOther",
-            "posix:isOther, posix:isOther"
-    })
-    void testReadAttributesMapIsOther(String attributeName, String expectedKey) throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "isOther", "basic:isOther", "posix:isOther" })
+    void testReadAttributesMapIsOther(String attributeName) throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        Map<String, ?> expected = Collections.singletonMap(expectedKey, false);
+        Map<String, ?> expected = Collections.singletonMap("isOther", false);
         assertEquals(expected, attributes);
     }
 
-    @ParameterizedTest(name = "{0} -> {1}")
-    @CsvSource({
-            "fileKey, basic:fileKey",
-            "basic:fileKey, basic:fileKey",
-            "posix:fileKey, posix:fileKey"
-    })
-    void testReadAttributesMapFileKey(String attributeName, String expectedKey) throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "fileKey", "basic:fileKey", "posix:fileKey" })
+    void testReadAttributesMapFileKey(String attributeName) throws IOException {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
-        Map<String, ?> expected = Collections.singletonMap(expectedKey, null);
+        Map<String, ?> expected = Collections.singletonMap("fileKey", null);
         assertEquals(expected, attributes);
     }
 
@@ -2097,8 +2065,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "size,isDirectory");
         Map<String, Object> expected = new HashMap<>();
         // Directories always have size 0 when using sshd-core
-        expected.put("basic:size", 0L);
-        expected.put("basic:isDirectory", true);
+        expected.put("size", 0L);
+        expected.put("isDirectory", true);
         assertEquals(expected, attributes);
     }
 
@@ -2108,8 +2076,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "size,isRegularFile");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("basic:size", Files.size(foo));
-        expected.put("basic:isRegularFile", true);
+        expected.put("size", Files.size(foo));
+        expected.put("isRegularFile", true);
         assertEquals(expected, attributes);
     }
 
@@ -2120,22 +2088,22 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "*");
         Map<String, Object> expected = new HashMap<>();
         // Directories always have size 0 when using sshd-core
-        expected.put("basic:size", 0L);
-        expected.put("basic:isRegularFile", false);
-        expected.put("basic:isDirectory", true);
-        expected.put("basic:isSymbolicLink", false);
-        expected.put("basic:isOther", false);
-        expected.put("basic:fileKey", null);
+        expected.put("size", 0L);
+        expected.put("isRegularFile", false);
+        expected.put("isDirectory", true);
+        expected.put("isSymbolicLink", false);
+        expected.put("isOther", false);
+        expected.put("fileKey", null);
 
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
 
-        attributes = provider().readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        attributes = provider().readAttributes(createPath("/foo"), "lastModifiedTime,*");
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
     }
 
@@ -2145,22 +2113,22 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "*");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("basic:size", Files.size(foo));
-        expected.put("basic:isRegularFile", true);
-        expected.put("basic:isDirectory", false);
-        expected.put("basic:isSymbolicLink", false);
-        expected.put("basic:isOther", false);
-        expected.put("basic:fileKey", null);
+        expected.put("size", Files.size(foo));
+        expected.put("isRegularFile", true);
+        expected.put("isDirectory", false);
+        expected.put("isSymbolicLink", false);
+        expected.put("isOther", false);
+        expected.put("fileKey", null);
 
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
 
-        attributes = provider().readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        attributes = provider().readAttributes(createPath("/foo"), "lastModifiedTime,*");
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
     }
 
@@ -2171,8 +2139,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "basic:size,isDirectory");
         Map<String, Object> expected = new HashMap<>();
         // Directories always have size 0 when using sshd-core
-        expected.put("basic:size", 0L);
-        expected.put("basic:isDirectory", true);
+        expected.put("size", 0L);
+        expected.put("isDirectory", true);
         assertEquals(expected, attributes);
     }
 
@@ -2182,8 +2150,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "basic:size,isRegularFile");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("basic:size", Files.size(foo));
-        expected.put("basic:isRegularFile", true);
+        expected.put("size", Files.size(foo));
+        expected.put("isRegularFile", true);
         assertEquals(expected, attributes);
     }
 
@@ -2194,22 +2162,22 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "basic:*");
         Map<String, Object> expected = new HashMap<>();
         // Directories always have size 0 when using sshd-core
-        expected.put("basic:size", 0L);
-        expected.put("basic:isRegularFile", false);
-        expected.put("basic:isDirectory", true);
-        expected.put("basic:isSymbolicLink", false);
-        expected.put("basic:isOther", false);
-        expected.put("basic:fileKey", null);
+        expected.put("size", 0L);
+        expected.put("isRegularFile", false);
+        expected.put("isDirectory", true);
+        expected.put("isSymbolicLink", false);
+        expected.put("isOther", false);
+        expected.put("fileKey", null);
 
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
 
         attributes = provider().readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
     }
 
@@ -2219,32 +2187,33 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "basic:*");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("basic:size", Files.size(foo));
-        expected.put("basic:isRegularFile", true);
-        expected.put("basic:isDirectory", false);
-        expected.put("basic:isSymbolicLink", false);
-        expected.put("basic:isOther", false);
-        expected.put("basic:fileKey", null);
+        expected.put("size", Files.size(foo));
+        expected.put("isRegularFile", true);
+        expected.put("isDirectory", false);
+        expected.put("isSymbolicLink", false);
+        expected.put("isOther", false);
+        expected.put("fileKey", null);
 
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
 
         attributes = provider().readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
-        assertNotNull(attributes.remove("basic:lastModifiedTime"));
-        assertNotNull(attributes.remove("basic:lastAccessTime"));
-        assertNotNull(attributes.remove("basic:creationTime"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
         assertEquals(expected, attributes);
     }
 
-    @Test
-    void testReadAttributesMapOwnerOwner() throws IOException {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "owner:owner", "posix:owner" })
+    void testReadAttributesMapOwner(String attributeName) throws IOException {
         addDirectory("/foo");
 
-        Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "owner:owner");
-        assertEquals(Collections.singleton("owner:owner"), attributes.keySet());
-        assertNotNull(attributes.get("owner:owner"));
+        Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), attributeName);
+        assertEquals(Collections.singleton("owner"), attributes.keySet());
+        assertNotNull(attributes.get("owner"));
     }
 
     @Test
@@ -2252,21 +2221,12 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "owner:*");
-        assertEquals(Collections.singleton("owner:owner"), attributes.keySet());
-        assertNotNull(attributes.get("owner:owner"));
+        assertEquals(Collections.singleton("owner"), attributes.keySet());
+        assertNotNull(attributes.get("owner"));
 
         attributes = provider().readAttributes(createPath("/foo"), "owner:owner,*");
-        assertEquals(Collections.singleton("owner:owner"), attributes.keySet());
-        assertNotNull(attributes.get("owner:owner"));
-    }
-
-    @Test
-    void testReadAttributesMapPosixOwner() throws IOException {
-        addDirectory("/foo");
-
-        Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:owner");
-        assertEquals(Collections.singleton("posix:owner"), attributes.keySet());
-        assertNotNull(attributes.get("posix:owner"));
+        assertEquals(Collections.singleton("owner"), attributes.keySet());
+        assertNotNull(attributes.get("owner"));
     }
 
     @Test
@@ -2274,8 +2234,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:group");
-        assertEquals(Collections.singleton("posix:group"), attributes.keySet());
-        assertNotNull(attributes.get("posix:group"));
+        assertEquals(Collections.singleton("group"), attributes.keySet());
+        assertNotNull(attributes.get("group"));
     }
 
     @Test
@@ -2283,8 +2243,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         addDirectory("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:permissions");
-        assertEquals(Collections.singleton("posix:permissions"), attributes.keySet());
-        assertNotNull(attributes.get("posix:permissions"));
+        assertEquals(Collections.singleton("permissions"), attributes.keySet());
+        assertNotNull(attributes.get("permissions"));
     }
 
     @Test
@@ -2293,9 +2253,9 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:size,owner,group");
         // Directories always have size 0 when using sshd-core
-        Map<String, ?> expected = Collections.singletonMap("posix:size", 0L);
-        assertNotNull(attributes.remove("posix:owner"));
-        assertNotNull(attributes.remove("posix:group"));
+        Map<String, ?> expected = Collections.singletonMap("size", 0L);
+        assertNotNull(attributes.remove("owner"));
+        assertNotNull(attributes.remove("group"));
         assertEquals(expected, attributes);
     }
 
@@ -2304,9 +2264,9 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Path foo = addFile("/foo");
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:size,owner,group");
-        Map<String, ?> expected = Collections.singletonMap("posix:size", Files.size(foo));
-        assertNotNull(attributes.remove("posix:owner"));
-        assertNotNull(attributes.remove("posix:group"));
+        Map<String, ?> expected = Collections.singletonMap("size", Files.size(foo));
+        assertNotNull(attributes.remove("owner"));
+        assertNotNull(attributes.remove("group"));
         assertEquals(expected, attributes);
     }
 
@@ -2317,28 +2277,28 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:*");
         Map<String, Object> expected = new HashMap<>();
         // Directories always have size 0 when using sshd-core
-        expected.put("posix:size", 0L);
-        expected.put("posix:isRegularFile", false);
-        expected.put("posix:isDirectory", true);
-        expected.put("posix:isSymbolicLink", false);
-        expected.put("posix:isOther", false);
-        expected.put("posix:fileKey", null);
+        expected.put("size", 0L);
+        expected.put("isRegularFile", false);
+        expected.put("isDirectory", true);
+        expected.put("isSymbolicLink", false);
+        expected.put("isOther", false);
+        expected.put("fileKey", null);
 
-        assertNotNull(attributes.remove("posix:lastModifiedTime"));
-        assertNotNull(attributes.remove("posix:lastAccessTime"));
-        assertNotNull(attributes.remove("posix:creationTime"));
-        assertNotNull(attributes.remove("posix:owner"));
-        assertNotNull(attributes.remove("posix:group"));
-        assertNotNull(attributes.remove("posix:permissions"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
+        assertNotNull(attributes.remove("owner"));
+        assertNotNull(attributes.remove("group"));
+        assertNotNull(attributes.remove("permissions"));
         assertEquals(expected, attributes);
 
         attributes = provider().readAttributes(createPath("/foo"), "posix:lastModifiedTime,*");
-        assertNotNull(attributes.remove("posix:lastModifiedTime"));
-        assertNotNull(attributes.remove("posix:lastAccessTime"));
-        assertNotNull(attributes.remove("posix:creationTime"));
-        assertNotNull(attributes.remove("posix:owner"));
-        assertNotNull(attributes.remove("posix:group"));
-        assertNotNull(attributes.remove("posix:permissions"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
+        assertNotNull(attributes.remove("owner"));
+        assertNotNull(attributes.remove("group"));
+        assertNotNull(attributes.remove("permissions"));
         assertEquals(expected, attributes);
     }
 
@@ -2348,28 +2308,28 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:*");
         Map<String, Object> expected = new HashMap<>();
-        expected.put("posix:size", Files.size(foo));
-        expected.put("posix:isRegularFile", true);
-        expected.put("posix:isDirectory", false);
-        expected.put("posix:isSymbolicLink", false);
-        expected.put("posix:isOther", false);
-        expected.put("posix:fileKey", null);
+        expected.put("size", Files.size(foo));
+        expected.put("isRegularFile", true);
+        expected.put("isDirectory", false);
+        expected.put("isSymbolicLink", false);
+        expected.put("isOther", false);
+        expected.put("fileKey", null);
 
-        assertNotNull(attributes.remove("posix:lastModifiedTime"));
-        assertNotNull(attributes.remove("posix:lastAccessTime"));
-        assertNotNull(attributes.remove("posix:creationTime"));
-        assertNotNull(attributes.remove("posix:owner"));
-        assertNotNull(attributes.remove("posix:group"));
-        assertNotNull(attributes.remove("posix:permissions"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
+        assertNotNull(attributes.remove("owner"));
+        assertNotNull(attributes.remove("group"));
+        assertNotNull(attributes.remove("permissions"));
         assertEquals(expected, attributes);
 
         attributes = provider().readAttributes(createPath("/foo"), "posix:lastModifiedTime,*");
-        assertNotNull(attributes.remove("posix:lastModifiedTime"));
-        assertNotNull(attributes.remove("posix:lastAccessTime"));
-        assertNotNull(attributes.remove("posix:creationTime"));
-        assertNotNull(attributes.remove("posix:owner"));
-        assertNotNull(attributes.remove("posix:group"));
-        assertNotNull(attributes.remove("posix:permissions"));
+        assertNotNull(attributes.remove("lastModifiedTime"));
+        assertNotNull(attributes.remove("lastAccessTime"));
+        assertNotNull(attributes.remove("creationTime"));
+        assertNotNull(attributes.remove("owner"));
+        assertNotNull(attributes.remove("group"));
+        assertNotNull(attributes.remove("permissions"));
         assertEquals(expected, attributes);
     }
 
@@ -2385,8 +2345,27 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("dummy").getMessage(), exception.getMessage());
     }
 
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+            "basic:owner, owner",
+            "basic:permissions, permissions",
+            "basic:group, group",
+            "owner:permissions, permissions",
+            "owner:group, group",
+            "owner:size, size"
+    })
+    void testReadAttributesMapSupportedAttributeForWrongView(String attributes, String attribute) throws IOException {
+        addDirectory("/foo");
+
+        SFTPFileSystemProvider provider = provider();
+        SFTPPath path = createPath("/foo");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.readAttributes(path, attributes));
+        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute(attribute).getMessage(), exception.getMessage());
+    }
+
     @Test
-    void testReadAttributesMapUnsupportedType() throws IOException {
+    void testReadAttributesMapUnsupportedView() throws IOException {
         addDirectory("/foo");
 
         SFTPFileSystemProvider provider = provider();
@@ -2396,9 +2375,39 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs").getMessage(), exception.getMessage());
     }
 
-    // SFTPFileSystem.setOwner
+    // SFTPFileSystem.prefixAttributes
 
-    // the success flow cannot be properly tested on Windows
+    @Test
+    void testPrefixAttributes() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put("size", 1L);
+        attributes.put("isDirectory", "false");
+        attributes.put("owner", new SimpleUserPrincipal("test"));
+
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("posix:size", 1L);
+        expected.put("posix:isDirectory", "false");
+        expected.put("posix:owner", new SimpleUserPrincipal("test"));
+
+        assertEquals(expected, SFTPFileSystem.prefixAttributes(attributes, FileAttributeViewMetadata.POSIX));
+    }
+
+    // SFTPFileSystem.SFTPPathAttributeView.setOwner
+
+    @Test
+    void testSetOwner() throws IOException {
+        addDirectory("/foo");
+
+        SFTPPath fooPath = createPath("/foo");
+
+        provider().getFileAttributeView(fooPath, FileOwnerAttributeView.class).setOwner(new SimpleUserPrincipal("1"));
+
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("uid", 1);
+        expected.put("gid", Integer.valueOf(provider().readAttributes(fooPath, PosixFileAttributes.class).group().getName()));
+
+        assertAttributesModified(fooPath, expected);
+    }
 
     @Test
     void testSetOwnerNonExisting() {
@@ -2425,9 +2434,22 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         verify(getExceptionFactory(), never()).createSetOwnerException(anyString(), any(SftpException.class));
     }
 
-    // SFTPFileSystem.setGroup
+    // SFTPFileSystem.SFTPPathAttributeView.setGroup
 
-    // the success flow cannot be properly tested on Windows
+    @Test
+    void testSetGroup() throws IOException {
+        addDirectory("/foo");
+
+        SFTPPath fooPath = createPath("/foo");
+
+        provider().getFileAttributeView(fooPath, PosixFileAttributeView.class).setGroup(new SimpleGroupPrincipal("1"));
+
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("uid", Integer.valueOf(provider().readAttributes(fooPath, PosixFileAttributes.class).owner().getName()));
+        expected.put("gid", 1);
+
+        assertAttributesModified(fooPath, expected);
+    }
 
     @Test
     void testSetGroupNonExisting() {
@@ -2454,9 +2476,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         verify(getExceptionFactory(), never()).createSetOwnerException(anyString(), any(SftpException.class));
     }
 
-    // SFTPFileSystem.setPermissions
+    // SFTPFileSystem.SFTPPathAttributeView.setPermissions
 
-    // the success flow cannot be properly tested on Windows
+    @Test
+    void testSetPermissions() throws IOException {
+        addDirectory("/foo");
+
+        SFTPPath fooPath = createPath("/foo");
+        Set<PosixFilePermission> permissions = EnumSet.of(PosixFilePermission.OWNER_READ);
+
+        provider().getFileAttributeView(fooPath, PosixFileAttributeView.class).setPermissions(permissions);
+
+        assertAttributesModified(fooPath, Collections.singletonMap("permissions", permissions));
+    }
 
     @Test
     void testSetPermissionsNonExisting() {
@@ -2520,16 +2552,85 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         assertEquals(lastModifiedTime, Files.getLastModifiedTime(foo));
     }
 
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = { "owner:owner", "posix:owner" })
+    void testSetAttributeOwner(String attribute) throws IOException {
+        addDirectory("/foo");
+
+        SFTPPath fooPath = createPath("/foo");
+
+        provider().setAttribute(fooPath, attribute, new SimpleUserPrincipal("1"));
+
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("uid", 1);
+        expected.put("gid", Integer.valueOf(provider().readAttributes(fooPath, PosixFileAttributes.class).group().getName()));
+
+        assertAttributesModified(fooPath, expected);
+    }
+
     @Test
-    void testSetAttributeUnsupportedAttribute() throws IOException {
+    void testSetAttributePermissions() throws IOException {
+        addDirectory("/foo");
+
+        SFTPPath fooPath = createPath("/foo");
+        Set<PosixFilePermission> permissions = EnumSet.of(PosixFilePermission.OWNER_READ);
+
+        provider().setAttribute(fooPath, "posix:permissions", permissions);
+
+        assertAttributesModified(fooPath, Collections.singletonMap("permissions", permissions));
+    }
+
+    @Test
+    void testSetAttributeGroup() throws IOException {
+        addDirectory("/foo");
+
+        SFTPPath fooPath = createPath("/foo");
+
+        provider().setAttribute(fooPath, "posix:group", new SimpleGroupPrincipal("1"));
+
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("uid", Integer.valueOf(provider().getFileAttributeView(fooPath, FileOwnerAttributeView.class).getOwner().getName()));
+        expected.put("gid", 1);
+
+        assertAttributesModified(fooPath, expected);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+            "lastAccessTime, lastAccessTime",
+            "creationTime, creationTime",
+            "basic:lastAccessTime, lastAccessTime",
+            "basic:creationTime, creationTime",
+            "posix:lastAccessTime, lastAccessTime",
+            "posix:creationTime, creationTime"
+    })
+    void testSetAttributeUnsupportedAttribute(String attributeToSet, String reportedAttribute) throws IOException {
         addDirectory("/foo");
 
         SFTPFileSystemProvider provider = provider();
         SFTPPath path = createPath("/foo");
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> provider.setAttribute(path, "basic:creationTime", true));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("basic:creationTime").getMessage(), exception.getMessage());
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.setAttribute(path, attributeToSet, true));
+        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute(reportedAttribute).getMessage(), exception.getMessage());
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+            "basic:owner, owner",
+            "basic:permissions, permissions",
+            "basic:group, group",
+            "owner:permissions, permissions",
+            "owner:group, group",
+            "owner:lastModifiedTime, lastModifiedTime"
+    })
+    void testSetAttributeSupportedAttributeForWrongView(String attributeToSet, String reportedAttribute) throws IOException {
+        addDirectory("/foo");
+
+        SFTPFileSystemProvider provider = provider();
+        SFTPPath path = createPath("/foo");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.setAttribute(path, attributeToSet, true));
+        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute(reportedAttribute).getMessage(), exception.getMessage());
     }
 
     @Test
@@ -2551,7 +2652,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         SFTPFileSystemProvider provider = provider();
         SFTPPath path = createPath("/foo");
 
-        assertThrows(ClassCastException.class, () -> provider.setAttribute(path, "basic:lastModifiedTime", 1));
+        assertThrows(ClassCastException.class, () -> provider.setAttribute(path, "lastModifiedTime", 1));
     }
 
     // SFTPFileSystem.getTotalSpace

@@ -17,6 +17,19 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.filesystems.SimpleAbstractPath.CURRENT_DIR;
+import static com.github.robtimus.filesystems.SimpleAbstractPath.PARENT_DIR;
+import static com.github.robtimus.filesystems.SimpleAbstractPath.ROOT_PATH;
+import static com.github.robtimus.filesystems.SimpleAbstractPath.SEPARATOR;
+import static com.github.robtimus.filesystems.attribute.FileAttributeConstants.BASIC_VIEW;
+import static com.github.robtimus.filesystems.attribute.FileAttributeConstants.CREATION_TIME;
+import static com.github.robtimus.filesystems.attribute.FileAttributeConstants.FILE_OWNER_VIEW;
+import static com.github.robtimus.filesystems.attribute.FileAttributeConstants.LAST_ACCESS_TIME;
+import static com.github.robtimus.filesystems.attribute.FileAttributeConstants.POSIX_VIEW;
+import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.getAttributeName;
+import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.getAttributeNames;
+import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.getViewName;
+import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.populateAttributeMap;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -38,9 +51,13 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.WatchService;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.FileAttributeView;
+import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
@@ -57,11 +74,14 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import com.github.robtimus.filesystems.AbstractDirectoryStream;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.PathMatcherSupport;
 import com.github.robtimus.filesystems.URISupport;
+import com.github.robtimus.filesystems.attribute.FileAttributeSupport;
+import com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata;
 import com.github.robtimus.filesystems.attribute.PosixFilePermissionSupport;
 import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
 import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
@@ -77,12 +97,13 @@ import com.jcraft.jsch.SftpStatVFS;
  */
 class SFTPFileSystem extends FileSystem {
 
-    private static final String CURRENT_DIR = "."; //$NON-NLS-1$
-    private static final String PARENT_DIR = ".."; //$NON-NLS-1$
-
+    // TODO: remove these two and their usages as part of the next major release
     @SuppressWarnings("nls")
+    private static final String PREFIX_ATTRIBUTES_PROPERTY = SFTPFileSystem.class.getPackage().getName() + ".prefixAttributes";
+    private static final boolean PREFIX_ATTRIBUTES = Boolean.getBoolean(PREFIX_ATTRIBUTES_PROPERTY);
+
     private static final Set<String> SUPPORTED_FILE_ATTRIBUTE_VIEWS = Collections
-            .unmodifiableSet(new HashSet<>(Arrays.asList("basic", "owner", "posix")));
+            .unmodifiableSet(new HashSet<>(Arrays.asList(BASIC_VIEW, FILE_OWNER_VIEW, POSIX_VIEW)));
 
     private final SFTPFileSystemProvider provider;
     private final Iterable<Path> rootDirectories;
@@ -97,7 +118,7 @@ class SFTPFileSystem extends FileSystem {
     SFTPFileSystem(SFTPFileSystemProvider provider, URI uri, SFTPEnvironment env) throws IOException {
         this.provider = Objects.requireNonNull(provider);
 
-        SFTPPath rootPath = new SFTPPath(this, "/"); //$NON-NLS-1$
+        SFTPPath rootPath = new SFTPPath(this, ROOT_PATH);
         this.rootDirectories = Collections.<Path>singleton(rootPath);
         this.fileStores = Collections.<FileStore>singleton(new SFTPFileStore(rootPath));
 
@@ -134,7 +155,7 @@ class SFTPFileSystem extends FileSystem {
 
     @Override
     public String getSeparator() {
-        return "/"; //$NON-NLS-1$
+        return SEPARATOR;
     }
 
     @Override
@@ -157,7 +178,7 @@ class SFTPFileSystem extends FileSystem {
     public Path getPath(String first, String... more) {
         StringBuilder sb = new StringBuilder(first);
         for (String s : more) {
-            sb.append("/").append(s); //$NON-NLS-1$
+            sb.append(SEPARATOR).append(s);
         }
         return new SFTPPath(this, sb.toString());
     }
@@ -195,7 +216,7 @@ class SFTPFileSystem extends FileSystem {
         if (path.isAbsolute()) {
             return path;
         }
-        return new SFTPPath(this, defaultDirectory + "/" + path.path()); //$NON-NLS-1$
+        return new SFTPPath(this, defaultDirectory + SEPARATOR + path.path());
     }
 
     SFTPPath toRealPath(SFTPPath path, boolean followLinks) throws IOException {
@@ -578,6 +599,98 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
+    <V extends FileAttributeView> V getFileAttributeView(SFTPPath path, Class<V> type, boolean followLinks) {
+        if (type == BasicFileAttributeView.class) {
+            return type.cast(new SFTPPathAttributeView(BASIC_VIEW, path, followLinks));
+        }
+        if (type == FileOwnerAttributeView.class) {
+            return type.cast(new SFTPPathAttributeView(FILE_OWNER_VIEW, path, followLinks));
+        }
+        if (type == PosixFileAttributeView.class) {
+            return type.cast(new SFTPPathAttributeView(POSIX_VIEW, path, followLinks));
+        }
+        return null;
+    }
+
+    private final class SFTPPathAttributeView implements PosixFileAttributeView {
+
+        private final String name;
+        private final SFTPPath path;
+        private final boolean followLinks;
+
+        private SFTPPathAttributeView(String name, SFTPPath path, boolean followLinks) {
+            this.name = Objects.requireNonNull(name);
+            this.path = Objects.requireNonNull(path);
+            this.followLinks = followLinks;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public UserPrincipal getOwner() throws IOException {
+            return readAttributes().owner();
+        }
+
+        @Override
+        public PosixFileAttributes readAttributes() throws IOException {
+            return SFTPFileSystem.this.readAttributes(path, followLinks);
+        }
+
+        @Override
+        public void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
+            if (lastAccessTime != null) {
+                throw new IOException(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime")); //$NON-NLS-1$
+            }
+            if (createTime != null) {
+                throw new IOException(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime")); //$NON-NLS-1$
+            }
+            if (lastModifiedTime != null) {
+                try (Channel channel = channelPool.get()) {
+                    // times are in seconds
+                    channel.setMtime(pathToUpdate(channel).path(), lastModifiedTime.to(TimeUnit.SECONDS));
+                }
+            }
+        }
+
+        @Override
+        public void setOwner(UserPrincipal owner) throws IOException {
+            try {
+                int uid = Integer.parseInt(owner.getName());
+                try (Channel channel = channelPool.get()) {
+                    channel.chown(pathToUpdate(channel).path(), uid);
+                }
+            } catch (NumberFormatException e) {
+                throw new IOException(e);
+            }
+        }
+
+        @Override
+        public void setGroup(GroupPrincipal group) throws IOException {
+            try {
+                int gid = Integer.parseInt(group.getName());
+                try (Channel channel = channelPool.get()) {
+                    channel.chgrp(pathToUpdate(channel).path(), gid);
+                }
+            } catch (NumberFormatException e) {
+                throw new IOException(e);
+            }
+        }
+
+        @Override
+        public void setPermissions(Set<PosixFilePermission> permissions) throws IOException {
+            try (Channel channel = channelPool.get()) {
+                channel.chmod(pathToUpdate(channel).path(), PosixFilePermissionSupport.toMask(permissions));
+            }
+        }
+
+        private SFTPPath pathToUpdate(Channel channel) throws IOException {
+            return followLinks ? toRealPath(channel, path, followLinks).path : path;
+        }
+    }
+
     PosixFileAttributes readAttributes(SFTPPath path, boolean followLinks) throws IOException {
         try (Channel channel = channelPool.get()) {
             SftpATTRS attributes = getAttributes(channel, path, followLinks);
@@ -658,221 +771,80 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    @SuppressWarnings("nls")
-    private static final Set<String> BASIC_ATTRIBUTES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "basic:lastModifiedTime", "basic:lastAccessTime", "basic:creationTime", "basic:size",
-            "basic:isRegularFile", "basic:isDirectory", "basic:isSymbolicLink", "basic:isOther", "basic:fileKey")));
-
-    @SuppressWarnings("nls")
-    private static final Set<String> OWNER_ATTRIBUTES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "owner:owner")));
-
-    @SuppressWarnings("nls")
-    private static final Set<String> POSIX_ATTRIBUTES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "posix:lastModifiedTime", "posix:lastAccessTime", "posix:creationTime", "posix:size",
-            "posix:isRegularFile", "posix:isDirectory", "posix:isSymbolicLink", "posix:isOther", "posix:fileKey",
-            "posix:owner", "posix:group", "posix:permissions")));
-
     Map<String, Object> readAttributes(SFTPPath path, String attributes, boolean followLinks) throws IOException {
-        String view;
-        int pos = attributes.indexOf(':');
-        if (pos == -1) {
-            view = "basic"; //$NON-NLS-1$
-            attributes = "basic:" + attributes; //$NON-NLS-1$
-        } else {
-            view = attributes.substring(0, pos);
-        }
-        if (!SUPPORTED_FILE_ATTRIBUTE_VIEWS.contains(view)) {
-            throw Messages.fileSystemProvider().unsupportedFileAttributeView(view);
-        }
+        String viewName = getViewName(attributes);
+        FileAttributeViewMetadata metadata = getMetadata(viewName);
+        Set<String> attributeNames = getAttributeNames(attributes, metadata);
 
-        Set<String> allowedAttributes;
-        if (attributes.startsWith("basic:")) { //$NON-NLS-1$
-            allowedAttributes = BASIC_ATTRIBUTES;
-        } else if (attributes.startsWith("owner:")) { //$NON-NLS-1$
-            allowedAttributes = OWNER_ATTRIBUTES;
-        } else if (attributes.startsWith("posix:")) { //$NON-NLS-1$
-            allowedAttributes = POSIX_ATTRIBUTES;
-        } else {
-            // should not occur
-            throw Messages.fileSystemProvider().unsupportedFileAttributeView(attributes.substring(0, attributes.indexOf(':')));
-        }
+        PosixFileAttributes fileAttributes = readAttributes(path, followLinks);
 
-        Map<String, Object> result = getAttributeMap(attributes, allowedAttributes);
-
-        PosixFileAttributes posixAttributes = readAttributes(path, followLinks);
-
-        for (Map.Entry<String, Object> entry : result.entrySet()) {
-            switch (entry.getKey()) {
-                case "basic:lastModifiedTime": //$NON-NLS-1$
-                case "posix:lastModifiedTime": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.lastModifiedTime());
-                    break;
-                case "basic:lastAccessTime": //$NON-NLS-1$
-                case "posix:lastAccessTime": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.lastAccessTime());
-                    break;
-                case "basic:creationTime": //$NON-NLS-1$
-                case "posix:creationTime": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.creationTime());
-                    break;
-                case "basic:size": //$NON-NLS-1$
-                case "posix:size": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.size());
-                    break;
-                case "basic:isRegularFile": //$NON-NLS-1$
-                case "posix:isRegularFile": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.isRegularFile());
-                    break;
-                case "basic:isDirectory": //$NON-NLS-1$
-                case "posix:isDirectory": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.isDirectory());
-                    break;
-                case "basic:isSymbolicLink": //$NON-NLS-1$
-                case "posix:isSymbolicLink": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.isSymbolicLink());
-                    break;
-                case "basic:isOther": //$NON-NLS-1$
-                case "posix:isOther": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.isOther());
-                    break;
-                case "basic:fileKey": //$NON-NLS-1$
-                case "posix:fileKey": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.fileKey());
-                    break;
-                case "owner:owner": //$NON-NLS-1$
-                case "posix:owner": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.owner());
-                    break;
-                case "posix:group": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.group());
-                    break;
-                case "posix:permissions": //$NON-NLS-1$
-                    entry.setValue(posixAttributes.permissions());
-                    break;
-                default:
-                    // should not occur
-                    throw new IllegalStateException("unexpected attribute name: " + entry.getKey()); //$NON-NLS-1$
-            }
-        }
-        return result;
+        Map<String, Object> result = new HashMap<>();
+        populateAttributeMap(result, fileAttributes, attributeNames);
+        return prefixAttributesIfNeeded(result, metadata);
     }
 
-    private Map<String, Object> getAttributeMap(String attributes, Set<String> allowedAttributes) {
-        int indexOfColon = attributes.indexOf(':');
-        String prefix = attributes.substring(0, indexOfColon + 1);
-        attributes = attributes.substring(indexOfColon + 1);
-
-        String[] attributeList = attributes.split(","); //$NON-NLS-1$
-        Map<String, Object> result = new HashMap<>(allowedAttributes.size());
-
-        for (String attribute : attributeList) {
-            String prefixedAttribute = prefix + attribute;
-            if (allowedAttributes.contains(prefixedAttribute)) {
-                result.put(prefixedAttribute, null);
-            } else if ("*".equals(attribute)) { //$NON-NLS-1$
-                for (String s : allowedAttributes) {
-                    result.put(s, null);
-                }
-            } else {
-                throw Messages.fileSystemProvider().unsupportedFileAttribute(attribute);
-            }
-        }
-        return result;
-    }
-
-    void setOwner(SFTPPath path, UserPrincipal owner, boolean followLinks) throws IOException {
-        try {
-            int uid = Integer.parseInt(owner.getName());
-            try (Channel channel = channelPool.get()) {
-                if (followLinks) {
-                    path = toRealPath(channel, path, followLinks).path;
-                }
-                channel.chown(path.path(), uid);
-            }
-        } catch (NumberFormatException e) {
-            throw new IOException(e);
+    private FileAttributeViewMetadata getMetadata(String viewName) {
+        switch (viewName) {
+            case BASIC_VIEW:
+                return FileAttributeViewMetadata.BASIC;
+            case FILE_OWNER_VIEW:
+                return FileAttributeViewMetadata.FILE_OWNER;
+            case POSIX_VIEW:
+                return FileAttributeViewMetadata.POSIX;
+            default:
+                throw Messages.fileSystemProvider().unsupportedFileAttributeView(viewName);
         }
     }
 
-    void setGroup(SFTPPath path, GroupPrincipal group, boolean followLinks) throws IOException {
-        try {
-            int gid = Integer.parseInt(group.getName());
-            try (Channel channel = channelPool.get()) {
-                if (followLinks) {
-                    path = toRealPath(channel, path, followLinks).path;
-                }
-                channel.chgrp(path.path(), gid);
-            }
-        } catch (NumberFormatException e) {
-            throw new IOException(e);
-        }
+    private static Map<String, Object> prefixAttributesIfNeeded(Map<String, Object> attributes, FileAttributeViewMetadata metadata) {
+        return PREFIX_ATTRIBUTES
+                ? prefixAttributes(attributes, metadata)
+                : attributes;
     }
 
-    void setPermissions(SFTPPath path, Set<PosixFilePermission> permissions, boolean followLinks) throws IOException {
-        try (Channel channel = channelPool.get()) {
-            if (followLinks) {
-                path = toRealPath(channel, path, followLinks).path;
-            }
-            channel.chmod(path.path(), PosixFilePermissionSupport.toMask(permissions));
-        }
-    }
-
-    void setTimes(SFTPPath path, FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime, boolean followLinks) throws IOException {
-        if (lastAccessTime != null) {
-            throw new IOException(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime")); //$NON-NLS-1$
-        }
-        if (createTime != null) {
-            throw new IOException(Messages.fileSystemProvider().unsupportedFileAttribute("createAccessTime")); //$NON-NLS-1$
-        }
-        if (lastModifiedTime != null) {
-            setLastModifiedTime(path, lastModifiedTime, followLinks);
-        }
-    }
-
-    void setLastModifiedTime(SFTPPath path, FileTime lastModifiedTime, boolean followLinks) throws IOException {
-        try (Channel channel = channelPool.get()) {
-            if (followLinks) {
-                path = toRealPath(channel, path, followLinks).path;
-            }
-            // times are in seconds
-            channel.setMtime(path.path(), lastModifiedTime.to(TimeUnit.SECONDS));
-        }
+    static Map<String, Object> prefixAttributes(Map<String, Object> attributes, FileAttributeViewMetadata metadata) {
+        String prefix = metadata.viewName() + ":"; //$NON-NLS-1$
+        return attributes.entrySet().stream()
+                .collect(Collectors.toMap(e -> prefix + e.getKey(), Map.Entry::getValue));
     }
 
     void setAttribute(SFTPPath path, String attribute, Object value, boolean followLinks) throws IOException {
-        String view;
-        int pos = attribute.indexOf(':');
-        if (pos == -1) {
-            view = "basic"; //$NON-NLS-1$
-            attribute = "basic:" + attribute; //$NON-NLS-1$
-        } else {
-            view = attribute.substring(0, pos);
-        }
-        if (!"basic".equals(view) && !"owner".equals(view) && !"posix".equals(view)) { //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            throw Messages.fileSystemProvider().unsupportedFileAttributeView(view);
+        String viewName = getViewName(attribute);
+        String attributeName = getAttributeName(attribute);
+
+        // Special cases that are supported by FileAttributeSupport but not this class
+        if (LAST_ACCESS_TIME.equals(attributeName) || CREATION_TIME.equals(attributeName)) {
+            throw Messages.fileSystemProvider().unsupportedFileAttribute(attributeName);
         }
 
-        switch (attribute) {
-            case "basic:lastModifiedTime": //$NON-NLS-1$
-            case "posix:lastModifiedTime": //$NON-NLS-1$
-                setLastModifiedTime(path, (FileTime) value, followLinks);
+        switch (viewName) {
+            case BASIC_VIEW:
+                setBasicAttribute(path, attributeName, value, followLinks);
                 break;
-            case "owner:owner": //$NON-NLS-1$
-            case "posix:owner": //$NON-NLS-1$
-                setOwner(path, (UserPrincipal) value, followLinks);
+            case FILE_OWNER_VIEW:
+                setFileOwnerAttribute(path, attributeName, value, followLinks);
                 break;
-            case "posix:group": //$NON-NLS-1$
-                setGroup(path, (GroupPrincipal) value, followLinks);
-                break;
-            case "posix:permissions": //$NON-NLS-1$
-                @SuppressWarnings("unchecked")
-                Set<PosixFilePermission> permissions = (Set<PosixFilePermission>) value;
-                setPermissions(path, permissions, followLinks);
+            case POSIX_VIEW:
+                setPosixAttribute(path, attributeName, value, followLinks);
                 break;
             default:
-                throw Messages.fileSystemProvider().unsupportedFileAttribute(attribute);
+                throw Messages.fileSystemProvider().unsupportedFileAttributeView(viewName);
         }
+    }
+
+    private void setBasicAttribute(SFTPPath path, String attribute, Object value, boolean followLinks) throws IOException {
+        BasicFileAttributeView view = getFileAttributeView(path, BasicFileAttributeView.class, followLinks);
+        FileAttributeSupport.setAttribute(attribute, value, view);
+    }
+
+    private void setFileOwnerAttribute(SFTPPath path, String attribute, Object value, boolean followLinks) throws IOException {
+        FileOwnerAttributeView view = getFileAttributeView(path, FileOwnerAttributeView.class, followLinks);
+        FileAttributeSupport.setAttribute(attribute, value, view);
+    }
+
+    private void setPosixAttribute(SFTPPath path, String attribute, Object value, boolean followLinks) throws IOException {
+        PosixFileAttributeView view = getFileAttributeView(path, PosixFileAttributeView.class, followLinks);
+        FileAttributeSupport.setAttribute(attribute, value, view);
     }
 
     private SftpATTRS getAttributes(Channel channel, SFTPPath path, boolean followLinks) throws IOException {

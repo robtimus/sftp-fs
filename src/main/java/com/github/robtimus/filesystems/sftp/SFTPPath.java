@@ -35,11 +35,8 @@ import java.nio.file.WatchEvent.Modifier;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.FileAttribute;
-import java.nio.file.attribute.FileTime;
-import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.PosixFileAttributes;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.UserPrincipal;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -216,28 +213,16 @@ class SFTPPath extends SimpleAbstractPath {
         fs.checkAccess(this, modes);
     }
 
+    <V extends FileAttributeView> V getFileAttributeView(Class<V> type, boolean followLinks) {
+        return fs.getFileAttributeView(this, type, followLinks);
+    }
+
     PosixFileAttributes readAttributes(boolean followLinks) throws IOException {
         return fs.readAttributes(this, followLinks);
     }
 
     Map<String, Object> readAttributes(String attributes, boolean followLinks) throws IOException {
         return fs.readAttributes(this, attributes, followLinks);
-    }
-
-    void setOwner(UserPrincipal owner, boolean followLinks) throws IOException {
-        fs.setOwner(this, owner, followLinks);
-    }
-
-    void setGroup(GroupPrincipal group, boolean followLinks) throws IOException {
-        fs.setGroup(this, group, followLinks);
-    }
-
-    void setPermissions(Set<PosixFilePermission> permissions, boolean followLinks) throws IOException {
-        fs.setPermissions(this, permissions, followLinks);
-    }
-
-    void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime, boolean followLinks) throws IOException {
-        fs.setTimes(this, lastModifiedTime, lastAccessTime, createTime, followLinks);
     }
 
     void setAttribute(String attribute, Object value, boolean followLinks) throws IOException {

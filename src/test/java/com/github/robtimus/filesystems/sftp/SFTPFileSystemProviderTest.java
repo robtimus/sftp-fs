@@ -25,7 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
@@ -40,6 +42,9 @@ import java.nio.file.Paths;
 import java.nio.file.ProviderMismatchException;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.DosFileAttributeView;
+import java.nio.file.attribute.FileOwnerAttributeView;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.HashMap;
@@ -198,6 +203,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
     @Test
     void testGetFileAttributeViewBasic() throws IOException {
+        Path foo = addDirectory("/foo/bar");
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
@@ -206,11 +212,43 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             BasicFileAttributeView view = fs.provider().getFileAttributeView(path, BasicFileAttributeView.class);
             assertNotNull(view);
             assertEquals("basic", view.name());
+
+            assertDoesNotThrow(() -> view.setTimes(null, null, null));
+
+            FileTime fileTime = FileTime.fromMillis(0);
+
+            view.setTimes(fileTime, null, null);
+            assertEquals(fileTime, Files.readAttributes(foo, BasicFileAttributes.class).lastModifiedTime());
+
+            IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
+            IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime").getMessage(), cause.getMessage());
+
+            exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
+            cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime").getMessage(), cause.getMessage());
+        }
+    }
+
+    @Test
+    void testGetFileAttributeViewFileOwner() throws IOException {
+        addDirectory("/foo/bar");
+
+        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+            SFTPPath path = new SFTPPath(fs, "/foo/bar");
+
+            FileOwnerAttributeView view = fs.provider().getFileAttributeView(path, FileOwnerAttributeView.class);
+            assertNotNull(view);
+
+            assertNotNull(view.getOwner());
+            assertNotNull(view.getOwner().getName());
         }
     }
 
     @Test
     void testGetFileAttributeViewPosix() throws IOException {
+        Path foo = addDirectory("/foo/bar");
 
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
@@ -219,6 +257,33 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             PosixFileAttributeView view = fs.provider().getFileAttributeView(path, PosixFileAttributeView.class);
             assertNotNull(view);
             assertEquals("posix", view.name());
+
+            assertNotNull(view.getOwner());
+            assertNotNull(view.getOwner().getName());
+
+            FileTime fileTime = FileTime.fromMillis(0);
+
+            view.setTimes(fileTime, null, null);
+            assertEquals(fileTime, Files.readAttributes(foo, BasicFileAttributes.class).lastModifiedTime());
+
+            IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
+            IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime").getMessage(), cause.getMessage());
+
+            exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
+            cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime").getMessage(), cause.getMessage());
+        }
+    }
+
+    @Test
+    void testGetFileAttributeViewOther() throws IOException {
+        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+            SFTPPath path = new SFTPPath(fs, "/foo/bar");
+
+            DosFileAttributeView view = fs.provider().getFileAttributeView(path, DosFileAttributeView.class);
+            assertNull(view);
         }
     }
 
