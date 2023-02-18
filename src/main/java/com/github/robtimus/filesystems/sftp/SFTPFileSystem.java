@@ -30,6 +30,9 @@ import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.get
 import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.getAttributeNames;
 import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.getViewName;
 import static com.github.robtimus.filesystems.attribute.FileAttributeSupport.populateAttributeMap;
+import static com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata.BASIC;
+import static com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata.FILE_OWNER;
+import static com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata.POSIX;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -62,10 +65,8 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +82,7 @@ import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.PathMatcherSupport;
 import com.github.robtimus.filesystems.URISupport;
 import com.github.robtimus.filesystems.attribute.FileAttributeSupport;
+import com.github.robtimus.filesystems.attribute.FileAttributeViewCollection;
 import com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata;
 import com.github.robtimus.filesystems.attribute.PosixFilePermissionSupport;
 import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
@@ -102,8 +104,7 @@ class SFTPFileSystem extends FileSystem {
     private static final String PREFIX_ATTRIBUTES_PROPERTY = SFTPFileSystem.class.getPackage().getName() + ".prefixAttributes";
     private static final boolean PREFIX_ATTRIBUTES = Boolean.getBoolean(PREFIX_ATTRIBUTES_PROPERTY);
 
-    private static final Set<String> SUPPORTED_FILE_ATTRIBUTE_VIEWS = Collections
-            .unmodifiableSet(new HashSet<>(Arrays.asList(BASIC_VIEW, FILE_OWNER_VIEW, POSIX_VIEW)));
+    static final FileAttributeViewCollection VIEWS = FileAttributeViewCollection.withViews(BASIC, FILE_OWNER, POSIX);
 
     private final SFTPFileSystemProvider provider;
     private final Iterable<Path> rootDirectories;
@@ -171,7 +172,7 @@ class SFTPFileSystem extends FileSystem {
 
     @Override
     public Set<String> supportedFileAttributeViews() {
-        return SUPPORTED_FILE_ATTRIBUTE_VIEWS;
+        return VIEWS.viewNames();
     }
 
     @Override
@@ -773,37 +774,24 @@ class SFTPFileSystem extends FileSystem {
 
     Map<String, Object> readAttributes(SFTPPath path, String attributes, boolean followLinks) throws IOException {
         String viewName = getViewName(attributes);
-        FileAttributeViewMetadata metadata = getMetadata(viewName);
-        Set<String> attributeNames = getAttributeNames(attributes, metadata);
+        FileAttributeViewMetadata view = VIEWS.getView(viewName);
+        Set<String> attributeNames = getAttributeNames(attributes, view);
 
         PosixFileAttributes fileAttributes = readAttributes(path, followLinks);
 
         Map<String, Object> result = new HashMap<>();
         populateAttributeMap(result, fileAttributes, attributeNames);
-        return prefixAttributesIfNeeded(result, metadata);
+        return prefixAttributesIfNeeded(result, view);
     }
 
-    private FileAttributeViewMetadata getMetadata(String viewName) {
-        switch (viewName) {
-            case BASIC_VIEW:
-                return FileAttributeViewMetadata.BASIC;
-            case FILE_OWNER_VIEW:
-                return FileAttributeViewMetadata.FILE_OWNER;
-            case POSIX_VIEW:
-                return FileAttributeViewMetadata.POSIX;
-            default:
-                throw Messages.fileSystemProvider().unsupportedFileAttributeView(viewName);
-        }
-    }
-
-    private static Map<String, Object> prefixAttributesIfNeeded(Map<String, Object> attributes, FileAttributeViewMetadata metadata) {
+    private static Map<String, Object> prefixAttributesIfNeeded(Map<String, Object> attributes, FileAttributeViewMetadata view) {
         return PREFIX_ATTRIBUTES
-                ? prefixAttributes(attributes, metadata)
+                ? prefixAttributes(attributes, view)
                 : attributes;
     }
 
-    static Map<String, Object> prefixAttributes(Map<String, Object> attributes, FileAttributeViewMetadata metadata) {
-        String prefix = metadata.viewName() + ":"; //$NON-NLS-1$
+    static Map<String, Object> prefixAttributes(Map<String, Object> attributes, FileAttributeViewMetadata view) {
+        String prefix = view.viewName() + ":"; //$NON-NLS-1$
         return attributes.entrySet().stream()
                 .collect(Collectors.toMap(e -> prefix + e.getKey(), Map.Entry::getValue));
     }
