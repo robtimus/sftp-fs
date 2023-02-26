@@ -19,6 +19,7 @@ package com.github.robtimus.filesystems.sftp;
 
 import static com.github.robtimus.filesystems.sftp.SFTPFileSystemProvider.normalizeWithUsername;
 import static com.github.robtimus.filesystems.sftp.SFTPFileSystemProvider.normalizeWithoutPassword;
+import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -159,7 +160,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         URI uri = URI.create("/foo/bar");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
-        assertEquals(Messages.uri().notAbsolute(uri).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.uri().notAbsolute(uri), exception);
     }
 
     @Test
@@ -167,7 +168,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
         URI uri = URI.create("https://www.github.com/");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
-        assertEquals(Messages.uri().invalidScheme(uri, "sftp").getMessage(), exception.getMessage());
+        assertChainEquals(Messages.uri().invalidScheme(uri, "sftp"), exception);
     }
 
     @Test
@@ -222,11 +223,11 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
             IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
             IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime").getMessage(), cause.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime"), cause);
 
             exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
             cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime").getMessage(), cause.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime"), cause);
         }
     }
 
@@ -268,11 +269,11 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
             IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
             IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime").getMessage(), cause.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime"), cause);
 
             exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
             cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime").getMessage(), cause.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime"), cause);
         }
     }
 

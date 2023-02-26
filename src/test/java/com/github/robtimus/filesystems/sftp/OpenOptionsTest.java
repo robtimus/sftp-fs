@@ -17,7 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -305,7 +305,7 @@ class OpenOptionsTest {
 
         private void testWithInvalid(OpenOption option) {
             UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewInputStream(option));
-            assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedOpenOption(option), exception);
         }
     }
 
@@ -686,7 +686,7 @@ class OpenOptionsTest {
 
         private void testWithInvalid(OpenOption option) {
             UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> OpenOptions.forNewOutputStream(option));
-            assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedOpenOption(option), exception);
         }
 
         @Test
@@ -696,7 +696,7 @@ class OpenOptionsTest {
 
         private void testWithIllegalCombination(OpenOption... options) {
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> OpenOptions.forNewOutputStream(options));
-            assertEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options), exception);
         }
     }
 
@@ -843,7 +843,7 @@ class OpenOptionsTest {
             Set<OpenOption> openOptions = Collections.singleton(option);
             UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
                     () -> OpenOptions.forNewByteChannel(openOptions));
-            assertEquals(Messages.fileSystemProvider().unsupportedOpenOption(option).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedOpenOption(option), exception);
         }
 
         @Test
@@ -864,7 +864,7 @@ class OpenOptionsTest {
         private void testWithIllegalCombination(StandardOpenOption... options) {
             Set<StandardOpenOption> openOptions = EnumSet.of(options[0], options);
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> OpenOptions.forNewByteChannel(openOptions));
-            assertEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().illegalOpenOptionCombination(options), exception);
         }
     }
 

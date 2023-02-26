@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -83,7 +84,7 @@ class CopyOptionsTest {
 
         private void testWithInvalid(CopyOption option) {
             UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> CopyOptions.forCopy(option));
-            assertEquals(Messages.fileSystemProvider().unsupportedCopyOption(option).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedCopyOption(option), exception);
         }
     }
 
@@ -200,7 +201,7 @@ class CopyOptionsTest {
         private void testWithInvalid(boolean sameFileSystem, CopyOption option) {
             UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
                     () -> CopyOptions.forMove(sameFileSystem, option));
-            assertEquals(Messages.fileSystemProvider().unsupportedCopyOption(option).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.fileSystemProvider().unsupportedCopyOption(option), exception);
         }
     }
 }

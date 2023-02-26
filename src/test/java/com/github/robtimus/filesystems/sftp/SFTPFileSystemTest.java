@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -1305,7 +1306,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         CopyOption[] options = { StandardCopyOption.COPY_ATTRIBUTES };
 
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> provider.copy(source, target, options));
-        assertEquals(Messages.fileSystemProvider().unsupportedCopyOption(StandardCopyOption.COPY_ATTRIBUTES).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedCopyOption(StandardCopyOption.COPY_ATTRIBUTES), exception);
     }
 
     // SFTPFileSystem.move
@@ -1972,7 +1973,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         Class<? extends BasicFileAttributes> type = DosFileAttributes.class;
 
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> provider.readAttributes(path, type));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttributesType(type).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttributesType(type), exception);
     }
 
     // SFTPFileSystem.readAttributes (map variant)
@@ -2342,7 +2343,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> provider.readAttributes(path, "posix:lastModifiedTime,owner,dummy"));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute("dummy").getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("dummy"), exception);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -2361,7 +2362,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         SFTPPath path = createPath("/foo");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.readAttributes(path, attributes));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute(attribute).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute(attribute), exception);
     }
 
     @Test
@@ -2372,7 +2373,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         SFTPPath path = createPath("/foo");
 
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class, () -> provider.readAttributes(path, "zipfs:*"));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs").getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs"), exception);
     }
 
     // SFTPFileSystem.prefixAttributes
@@ -2611,7 +2612,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         SFTPPath path = createPath("/foo");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.setAttribute(path, attributeToSet, true));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute(reportedAttribute).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute(reportedAttribute), exception);
     }
 
     @ParameterizedTest(name = "{0}")
@@ -2630,7 +2631,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         SFTPPath path = createPath("/foo");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.setAttribute(path, attributeToSet, true));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttribute(reportedAttribute).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute(reportedAttribute), exception);
     }
 
     @Test
@@ -2642,7 +2643,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
         UnsupportedOperationException exception = assertThrows(UnsupportedOperationException.class,
                 () -> provider.setAttribute(path, "zipfs:size", true));
-        assertEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs").getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs"), exception);
     }
 
     @Test

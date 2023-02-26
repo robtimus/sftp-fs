@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -231,7 +232,7 @@ class SFTPEnvironmentTest {
 
         final JSch jsch = mock(JSch.class);
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(jsch));
-        assertEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")), exception);
     }
 
     @Test
@@ -242,7 +243,7 @@ class SFTPEnvironmentTest {
 
         final JSch jsch = mock(JSch.class);
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(jsch));
-        assertEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")).getMessage(), exception.getMessage());
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("identities", env.get("identities")), exception);
     }
 
     @Test
