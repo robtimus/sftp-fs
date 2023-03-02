@@ -18,6 +18,7 @@
 package com.github.robtimus.filesystems.sftp.server;
 
 import java.io.IOException;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
@@ -39,7 +40,7 @@ import org.apache.sshd.sftp.server.SftpSubsystemFactory;
  *
  * @author Rob Spoor
  */
-@SuppressWarnings("javadoc")
+@SuppressWarnings({ "javadoc", "nls" })
 public class FixedSftpSubsystem extends SftpSubsystem {
 
     public FixedSftpSubsystem(ChannelSession channel, SftpSubsystemConfigurator configurator) {
@@ -50,6 +51,15 @@ public class FixedSftpSubsystem extends SftpSubsystem {
     protected Map<String, Object> doStat(int id, String path, int flags) throws IOException {
         Path p = resolveFile(path);
         return resolveFileAttributes(p, flags, IoUtils.getLinkOptions(true));
+    }
+
+    @Override
+    protected void setFileAttribute(Path file, String view, String attribute, Object value, LinkOption... options) throws IOException {
+        if ("uid".equals(attribute) || "gid".equals(attribute)) {
+            // Don't actually set the owner or group; it will be ignored on Windows but fails on Linux due to non-matching values
+            return;
+        }
+        super.setFileAttribute(file, view, attribute, value, options);
     }
 
     public static final class Factory extends SftpSubsystemFactory {
