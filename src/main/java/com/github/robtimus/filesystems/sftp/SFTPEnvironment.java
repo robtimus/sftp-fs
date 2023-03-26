@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.BinaryOperator;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.jcraft.jsch.ChannelSftp;
@@ -66,6 +67,7 @@ public class SFTPEnvironment implements Map<String, Object> {
     private static final String CONNECT_TIMEOUT = "connectTimeout"; //$NON-NLS-1$
 
     // JSch
+
     private static final String IDENTITY_REPOSITORY = "identityRepository"; //$NON-NLS-1$
     private static final String IDENTITIES = "identities"; //$NON-NLS-1$
     private static final String HOST_KEY_REPOSITORY = "hostKeyRepository"; //$NON-NLS-1$
@@ -78,6 +80,7 @@ public class SFTPEnvironment implements Map<String, Object> {
     private static final String USER_INFO = "userInfo"; //$NON-NLS-1$
     private static final String PASSWORD = "password"; //$NON-NLS-1$
     private static final String CONFIG = "config"; //$NON-NLS-1$
+    private static final String APPENDED_CONFIG = "appendedConfig"; //$NON-NLS-1$
     private static final String SOCKET_FACTORY = "socketFactory"; //$NON-NLS-1$
     // timeOut should have been timeout, but that's a breaking change...
     private static final String TIMEOUT = "timeOut"; //$NON-NLS-1$
@@ -216,6 +219,65 @@ public class SFTPEnvironment implements Map<String, Object> {
             put(CONFIG, config);
         }
         return config;
+    }
+
+    /**
+     * Stores a configuration option to use. Unlike {@link #withConfig(String, String)}, configuration options set using this method will be appended
+     * to existing configuration options instead of overwriting them. For instance, this method can be used to add support for {@code ssh-rsa} keys
+     * as follows:
+     * <pre><code>
+     * // JSch way:
+     * // session.setConfig("server_host_key", session.getConfig("server_host_key") + ",ssh-rsa");
+     * // session.setConfig("PubkeyAcceptedAlgorithms", session.getConfig("PubkeyAcceptedAlgorithms") + ",ssh-rsa");
+     *
+     * // sftp-fs way:
+     * SFTPEnvironment env = new SFTPEnvironment()
+     *         ...
+     *         .withAppendedConfig("server_host_key", "ssh-rsa")
+     *         .withAppendedConfig("PubkeyAcceptedAlgorithms", "ssh-rsa");
+     * </code></pre>
+     * <p>
+     * This method will use a comma to append configuration options. If this does not fit your needs, use
+     * {@link #withAppendedConfig(String, String, BinaryOperator)} with a custom appender.
+     *
+     * @param key The configuration key.
+     * @param value The configuration value.
+     * @return This object.
+     * @throws NullPointerException If the given key or value is {@code null}.
+     * @since 3.2
+     */
+    public SFTPEnvironment withAppendedConfig(String key, String value) {
+        return withAppendedConfig(key, value, AppendedConfig.DEFAULT_APPENDER);
+    }
+
+    /**
+     * Stores a configuration option to use. This is a more generalized version of {@link #withAppendedConfig(String, String)} that allows
+     * non-default combining of existing and new configuration options.
+     *
+     * @param key The configuration key.
+     * @param value The configuration value.
+     * @param appender A function that takes the previously configured option and the new option and returns a combined configuration option.
+     * @return This object.
+     * @throws NullPointerException If the given key, value or appender function is {@code null}.
+     * @since 3.2
+     */
+    public SFTPEnvironment withAppendedConfig(String key, String value, BinaryOperator<String> appender) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        Objects.requireNonNull(appender);
+
+        getAppendedConfig().put(key, new AppendedConfig(value, appender));
+        return this;
+    }
+
+    private Map<String, AppendedConfig> getAppendedConfig() {
+        @SuppressWarnings("unchecked")
+        Map<String, AppendedConfig> appendedConfig = FileSystemProviderSupport.getValue(this, APPENDED_CONFIG, Map.class, null);
+        if (appendedConfig == null) {
+            appendedConfig = new HashMap<>();
+            put(APPENDED_CONFIG, appendedConfig);
+        }
+        return appendedConfig;
     }
 
     /**
@@ -388,7 +450,7 @@ public class SFTPEnvironment implements Map<String, Object> {
     }
 
     /**
-     * Stores the config repository touse.
+     * Stores the config repository to use.
      *
      * @param repository The config repository to use.
      * @return This object.
@@ -610,6 +672,16 @@ public class SFTPEnvironment implements Map<String, Object> {
         if (containsKey(CONFIG)) {
             Properties config = FileSystemProviderSupport.getValue(this, CONFIG, Properties.class, null);
             session.setConfig(config);
+        }
+        if (containsKey(APPENDED_CONFIG)) {
+            Map<?, ?> appendedConfig = FileSystemProviderSupport.getValue(this, APPENDED_CONFIG, Map.class);
+            appendedConfig.forEach((key, value) -> {
+                if (key instanceof String && value instanceof AppendedConfig) {
+                    ((AppendedConfig) value).addConfig(session, (String) key);
+                } else {
+                    throw Messages.fileSystemProvider().env().invalidProperty(APPENDED_CONFIG, appendedConfig);
+                }
+            });
         }
     }
 
@@ -840,5 +912,50 @@ public class SFTPEnvironment implements Map<String, Object> {
      */
     public static SFTPEnvironment copy(Map<String, ?> env) {
         return new SFTPEnvironment(new HashMap<>(env));
+    }
+
+    static final class AppendedConfig {
+
+        static final BinaryOperator<String> DEFAULT_APPENDER = (u, v) -> u + "," + v; //$NON-NLS-1$
+
+        private final String value;
+        private final BinaryOperator<String> appender;
+
+        AppendedConfig(String value, BinaryOperator<String> appender) {
+            this.value = value;
+            this.appender = appender;
+        }
+
+        private void addConfig(Session session, String key) {
+            String existingValue = session.getConfig(key);
+            String newValue = existingValue == null ? value : appender.apply(existingValue, value);
+            session.setConfig(key, newValue);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            AppendedConfig other = (AppendedConfig) obj;
+            return value.equals(other.value) && appender.equals(other.appender);
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + value.hashCode();
+            result = prime * result + appender.hashCode();
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
     }
 }

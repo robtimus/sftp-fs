@@ -18,7 +18,10 @@
 package com.github.robtimus.filesystems.sftp;
 
 import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -35,15 +38,23 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
+import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.github.robtimus.filesystems.Messages;
+import com.github.robtimus.filesystems.sftp.SFTPEnvironment.AppendedConfig;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ConfigRepository;
 import com.jcraft.jsch.HostKey;
@@ -156,6 +167,28 @@ class SFTPEnvironmentTest {
         properties.setProperty(key2, value2);
 
         assertEquals(Collections.singletonMap("config", properties), env);
+    }
+
+    @Test
+    void testWithAppendedConfig() {
+        SFTPEnvironment env = new SFTPEnvironment(new LinkedHashMap<>());
+
+        assertEquals(Collections.emptyMap(), env);
+
+        String key1 = "key1";
+        String value1 = "value1";
+        String key2 = "key2";
+        String value2 = "value2";
+        BinaryOperator<String> appender2 = (u, v) -> u + ";" + v;
+
+        env.withAppendedConfig(key1, value1);
+        env.withAppendedConfig(key2, value2, appender2);
+
+        Map<String, AppendedConfig> appendedConfig = new HashMap<>();
+        appendedConfig.put(key1, new AppendedConfig(value1, AppendedConfig.DEFAULT_APPENDER));
+        appendedConfig.put(key2, new AppendedConfig(value2, appender2));
+
+        assertEquals(Collections.singletonMap("appendedConfig", appendedConfig), env);
     }
 
     @Test
@@ -292,6 +325,91 @@ class SFTPEnvironmentTest {
         verify(session).setClientVersion(null);
         verify(session).setHostKeyAlias(null);
         verifyNoMoreInteractions(session);
+    }
+
+    @Test
+    void testInitializeSessionWithAppendedConfig() {
+        String serverHostKeyKey = "server_host_key";
+        String pubkeyAcceptedAlgorithmsKey = "PubkeyAcceptedAlgorithms";
+        String dummyKey = UUID.randomUUID().toString();
+
+        SFTPEnvironment env = new SFTPEnvironment()
+                .withAppendedConfig(serverHostKeyKey, "ssh-rsa")
+                .withAppendedConfig(pubkeyAcceptedAlgorithmsKey, "ssh-rsa")
+                .withAppendedConfig(dummyKey, "ssh-rsa");
+
+        // Test through an actual non-connected Session object
+        JSch jsch = new JSch();
+        Session session = assertDoesNotThrow(() -> jsch.getSession("dummy"));
+
+        String existingServerHostKey = session.getConfig(serverHostKeyKey);
+        String existingPubkeyAcceptedAlgorithms = session.getConfig(pubkeyAcceptedAlgorithmsKey);
+        String existingDummyValue = session.getConfig(dummyKey);
+
+        assertNotNull(existingServerHostKey);
+        assertNotNull(existingPubkeyAcceptedAlgorithms);
+        assertNull(existingDummyValue);
+
+        assertDoesNotThrow(() -> env.initialize(session));
+
+        assertEquals(existingServerHostKey + ",ssh-rsa", session.getConfig(serverHostKeyKey));
+        assertEquals(existingPubkeyAcceptedAlgorithms + ",ssh-rsa", session.getConfig(pubkeyAcceptedAlgorithmsKey));
+        assertEquals("ssh-rsa", session.getConfig(dummyKey));
+    }
+
+    @Test
+    void testInitializeSessionWithInvalidAppendedConfig() {
+        final SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("appendedConfig", Collections.singleton("foobar"));
+
+        final Session session = mock(Session.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(session));
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("appendedConfig", env.get("appendedConfig")), exception);
+    }
+
+    @Test
+    void testInitializeSessionWithInvalidAppendedConfigKey() {
+        final SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("appendedConfig", Collections.singletonMap(1, new AppendedConfig("value", AppendedConfig.DEFAULT_APPENDER)));
+
+        final Session session = mock(Session.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(session));
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("appendedConfig", env.get("appendedConfig")), exception);
+    }
+
+    @Test
+    void testInitializeSessionWithNullAppendedConfigKey() {
+        final SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("appendedConfig", Collections.singletonMap(null, new AppendedConfig("value", AppendedConfig.DEFAULT_APPENDER)));
+
+        final Session session = mock(Session.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(session));
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("appendedConfig", env.get("appendedConfig")), exception);
+    }
+
+    @Test
+    void testInitializeSessionWithInvalidAppendedConfigValue() {
+        final SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("appendedConfig", Collections.singletonMap("key", "value"));
+
+        final Session session = mock(Session.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(session));
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("appendedConfig", env.get("appendedConfig")), exception);
+    }
+
+    @Test
+    void testInitializeSessionWithNullAppendedConfigValue() {
+        final SFTPEnvironment env = new SFTPEnvironment();
+        initializeFully(env);
+        env.put("appendedConfig", Collections.singletonMap("key", null));
+
+        final Session session = mock(Session.class);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> env.initialize(session));
+        assertChainEquals(Messages.fileSystemProvider().env().invalidProperty("appendedConfig", env.get("appendedConfig")), exception);
     }
 
     @Test
@@ -486,6 +604,63 @@ class SFTPEnvironmentTest {
         env.withFilenameEncoding(null);
         env.withDefaultDirectory(null);
         env.withFileSystemExceptionFactory(null);
+    }
+
+    @Nested
+    @TestInstance(Lifecycle.PER_CLASS)
+    class AppendedConfigTest {
+
+        @ParameterizedTest(name = "{0} equals {1}: {2}")
+        @MethodSource("equalsArguments")
+        void testEquals(AppendedConfig config, Object other, boolean expected) {
+            assertEquals(expected, config.equals(other));
+            if (other != null) {
+                assertEquals(expected, other.equals(config));
+            }
+        }
+
+        Arguments[] equalsArguments() {
+            BinaryOperator<String> appender = (u, v) -> u + ";" + v;
+
+            AppendedConfig config1 = new AppendedConfig("value1", AppendedConfig.DEFAULT_APPENDER);
+            AppendedConfig config2 = new AppendedConfig("value1", appender);
+
+            return new Arguments[] {
+                    arguments(config1, config1, true),
+                    arguments(config1, new AppendedConfig("value1", AppendedConfig.DEFAULT_APPENDER), true),
+                    arguments(config1, new AppendedConfig("value2", AppendedConfig.DEFAULT_APPENDER), false),
+                    arguments(config1, new AppendedConfig("value1", appender), false),
+                    arguments(config1, "foo", false),
+                    arguments(config1, null, false),
+                    arguments(config2, config2, true),
+                    arguments(config2, new AppendedConfig("value1", appender), true),
+                    arguments(config2, new AppendedConfig("value2", appender), false),
+                    arguments(config2, new AppendedConfig("value1", AppendedConfig.DEFAULT_APPENDER), false),
+                    arguments(config2, "foo", false),
+                    arguments(config2, null, false),
+            };
+        }
+
+        @Nested
+        class HashCodeTest {
+
+            @Test
+            void testWithDefaultAppender() {
+                AppendedConfig config = new AppendedConfig("value", AppendedConfig.DEFAULT_APPENDER);
+
+                assertEquals(config.hashCode(), config.hashCode());
+                assertEquals(config.hashCode(), new AppendedConfig("value", AppendedConfig.DEFAULT_APPENDER).hashCode());
+            }
+
+            @Test
+            void testWithCustomAppender() {
+                BinaryOperator<String> appender = (u, v) -> u + ";" + v;
+                AppendedConfig config = new AppendedConfig("value", appender);
+
+                assertEquals(config.hashCode(), config.hashCode());
+                assertEquals(config.hashCode(), new AppendedConfig("value", appender).hashCode());
+            }
+        }
     }
 
     static final class TestSocketFactory implements SocketFactory {
