@@ -75,7 +75,7 @@
     <version.junit-support>2.2</version.junit-support>
     <version.simple-pool>1.0</version.simple-pool>
     <version.slf4j>1.7.36</version.slf4j>
-    <version.sshd-sftp>2.9.2</version.sshd-sftp>
+    <version.sshd-sftp>2.10.0</version.sshd-sftp>
   </properties>
 
   <dependencies>

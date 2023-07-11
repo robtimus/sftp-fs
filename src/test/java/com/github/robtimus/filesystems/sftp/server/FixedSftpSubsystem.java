@@ -21,9 +21,7 @@ import java.io.IOException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.Map;
 import org.apache.sshd.common.util.GenericUtils;
-import org.apache.sshd.common.util.io.IoUtils;
 import org.apache.sshd.server.channel.ChannelSession;
 import org.apache.sshd.server.command.Command;
 import org.apache.sshd.server.session.ServerSession;
@@ -35,22 +33,11 @@ import org.apache.sshd.sftp.server.SftpSubsystem;
 import org.apache.sshd.sftp.server.SftpSubsystemConfigurator;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 
-/**
- * {@link SftpSubsystem} does not follow links when the {@code stat} command is executed. This class fixes that.
- *
- * @author Rob Spoor
- */
 @SuppressWarnings({ "javadoc", "nls" })
 public class FixedSftpSubsystem extends SftpSubsystem {
 
     public FixedSftpSubsystem(ChannelSession channel, SftpSubsystemConfigurator configurator) {
         super(channel, configurator);
-    }
-
-    @Override
-    protected Map<String, Object> doStat(int id, String path, int flags) throws IOException {
-        Path p = resolveFile(path);
-        return resolveFileAttributes(p, flags, IoUtils.getLinkOptions(true));
     }
 
     @Override
