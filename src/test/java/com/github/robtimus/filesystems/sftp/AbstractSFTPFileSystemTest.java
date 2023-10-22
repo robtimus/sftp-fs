@@ -373,7 +373,7 @@ abstract class AbstractSFTPFileSystemTest {
         //expected.forEach((key, value) -> assertThat(modified, hasEntry(key, value)));
     }
 
-    private static class ExceptionFactoryWrapper implements FileSystemExceptionFactory {
+    private static final class ExceptionFactoryWrapper implements FileSystemExceptionFactory {
 
         private FileSystemExceptionFactory delegate;
 
