@@ -144,6 +144,7 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <configuration>
+            <sourcepath>${project.basedir}/src/main/java</sourcepath>
             <links>
               <link>https://robtimus.github.io/fs-core/apidocs/</link>
             </links>
