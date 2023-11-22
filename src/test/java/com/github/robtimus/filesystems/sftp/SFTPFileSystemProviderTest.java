@@ -52,6 +52,7 @@ import java.nio.file.spi.FileSystemProvider;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
@@ -59,138 +60,154 @@ import com.github.robtimus.filesystems.URISupport;
 @SuppressWarnings("nls")
 class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
-    // support for Paths and Files
+    @Nested
+    class PathAndFiles {
 
-    @Test
-    void testPathsAndFilesSupport() throws IOException {
-        try (SFTPFileSystem fs = newFileSystem(createEnv())) {
-            Path path = Paths.get(URI.create(getBaseUrl() + "/foo"));
-            assertThat(path, instanceOf(SFTPPath.class));
-            // as required by Paths.get
-            assertEquals(path, path.toAbsolutePath());
+        @Test
+        void testSuccess() throws IOException {
+            try (SFTPFileSystem fs = newFileSystem(createEnv())) {
+                Path path = Paths.get(URI.create(getBaseUrl() + "/foo"));
+                assertThat(path, instanceOf(SFTPPath.class));
+                // as required by Paths.get
+                assertEquals(path, path.toAbsolutePath());
 
-            // the file does not exist yet
-            assertFalse(Files.exists(path));
-
-            Files.createFile(path);
-            try {
-                // the file now exists
-                assertTrue(Files.exists(path));
-
-                byte[] content = new byte[1024];
-                new Random().nextBytes(content);
-                try (OutputStream output = Files.newOutputStream(path)) {
-                    output.write(content);
-                }
-
-                // check the file directly
-                Path file = getFile("/foo");
-                assertArrayEquals(content, getContents(file));
-
-            } finally {
-
-                Files.delete(path);
+                // the file does not exist yet
                 assertFalse(Files.exists(path));
 
-                assertFalse(Files.exists(getPath("/foo")));
+                Files.createFile(path);
+                try {
+                    // the file now exists
+                    assertTrue(Files.exists(path));
+
+                    byte[] content = new byte[1024];
+                    new Random().nextBytes(content);
+                    try (OutputStream output = Files.newOutputStream(path)) {
+                        output.write(content);
+                    }
+
+                    // check the file directly
+                    Path file = getFile("/foo");
+                    assertArrayEquals(content, getContents(file));
+
+                } finally {
+
+                    Files.delete(path);
+                    assertFalse(Files.exists(path));
+
+                    assertFalse(Files.exists(getPath("/foo")));
+                }
+            }
+        }
+
+        @Test
+        void testFileSystemNotFound() {
+            URI uri = URI.create("sftp://sftp.github.com/");
+            FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> Paths.get(uri));
+            assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
+            assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
+        }
+    }
+
+    @Nested
+    class NewFileSystem {
+
+        @Test
+        void testWithMinimalEnv() throws IOException {
+            URI uri = URI.create(getBaseUrlWithCredentials() + "/" + getDefaultDir());
+            try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalEnv())) {
+                Path path = fs.getPath("");
+                assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+            }
+        }
+
+        @Test
+        void testWithMinimalIdentityEnv() throws IOException {
+            URI uri = URI.create(getBaseUrl() + "/" + getDefaultDir());
+            try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalIdentityEnv())) {
+                Path path = fs.getPath("");
+                assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+            }
+        }
+
+        @Test
+        void testWithUserInfoAndCredentials() {
+            URI uri = URI.create(getBaseUrl());
+            SFTPEnvironment env = createEnv();
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+            assertEquals(Messages.uri().hasUserInfo(uri).getMessage(), exception.getMessage());
+        }
+
+        @Test
+        void testWithPathAndDefaultDir() {
+            URI uri = getURI().resolve("/path");
+            SFTPEnvironment env = createEnv();
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+            assertEquals(Messages.uri().hasPath(uri).getMessage(), exception.getMessage());
+        }
+
+        @Test
+        void testWithQuery() {
+            URI uri = getURI().resolve("?q=v");
+            SFTPEnvironment env = createEnv();
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+            assertEquals(Messages.uri().hasQuery(uri).getMessage(), exception.getMessage());
+        }
+
+        @Test
+        void testWithFragment() {
+            URI uri = getURI().resolve("#id");
+            SFTPEnvironment env = createEnv();
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+            assertEquals(Messages.uri().hasFragment(uri).getMessage(), exception.getMessage());
+        }
+    }
+
+    @Nested
+    class GetFileSystem {
+
+        @Test
+        @SuppressWarnings("resource")
+        void testExisting() throws IOException {
+            try (FileSystem fs = newFileSystem(createEnv())) {
+                FileSystem existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl()));
+                assertSame(fs, existingFileSystem);
+
+                existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl() + "/"));
+                assertSame(fs, existingFileSystem);
+            }
+        }
+
+        @Test
+        @SuppressWarnings("resource")
+        void testExistingWithTrailingSlash() throws IOException {
+            try (FileSystem fs = newFileSystem(createEnv())) {
+                FileSystem existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl() + "/"));
+                assertSame(fs, existingFileSystem);
+
+                existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl() + "/"));
+                assertSame(fs, existingFileSystem);
+            }
+        }
+
+        @Test
+        void testNotExisting() {
+            URI uri = URI.create(getBaseUrl());
+            assertThrows(FileSystemNotFoundException.class, () -> FileSystems.getFileSystem(uri));
+        }
+
+        @Test
+        @SuppressWarnings("resource")
+        void testClosed() throws IOException {
+            try (FileSystem fs = newFileSystem(createEnv())) {
+                URI uri = URI.create(getBaseUrl());
+                FileSystem existingFileSystem = FileSystems.getFileSystem(uri);
+                assertSame(fs, existingFileSystem);
+
+                fs.close();
+                assertThrows(FileSystemNotFoundException.class, () -> FileSystems.getFileSystem(uri));
             }
         }
     }
-
-    @Test
-    void testPathsAndFilesSupportFileSystemNotFound() {
-        URI uri = URI.create("sftp://sftp.github.com/");
-        FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> Paths.get(uri));
-        assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
-        assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
-    }
-
-    // SFTPFileSystemProvider.newFileSystem
-
-    @Test
-    void testNewFileSystemWithMinimalEnv() throws IOException {
-        URI uri = URI.create(getBaseUrlWithCredentials() + "/" + getDefaultDir());
-        try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalEnv())) {
-            Path path = fs.getPath("");
-            assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
-        }
-    }
-
-    @Test
-    void testNewFileSystemWithMinimalIdentityEnv() throws IOException {
-        URI uri = URI.create(getBaseUrl() + "/" + getDefaultDir());
-        try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalIdentityEnv())) {
-            Path path = fs.getPath("");
-            assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
-        }
-    }
-
-    @Test
-    void testNewFileSystemWithUserInfoAndCredentials() {
-        URI uri = URI.create(getBaseUrl());
-        SFTPEnvironment env = createEnv();
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-        assertEquals(Messages.uri().hasUserInfo(uri).getMessage(), exception.getMessage());
-    }
-
-    @Test
-    void testNewFileSystemWithPathAndDefaultDir() {
-        URI uri = getURI().resolve("/path");
-        SFTPEnvironment env = createEnv();
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-        assertEquals(Messages.uri().hasPath(uri).getMessage(), exception.getMessage());
-    }
-
-    @Test
-    void testNewFileSystemWithQuery() {
-        URI uri = getURI().resolve("?q=v");
-        SFTPEnvironment env = createEnv();
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-        assertEquals(Messages.uri().hasQuery(uri).getMessage(), exception.getMessage());
-    }
-
-    @Test
-    void testNewFileSystemWithFragment() {
-        URI uri = getURI().resolve("#id");
-        SFTPEnvironment env = createEnv();
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-        assertEquals(Messages.uri().hasFragment(uri).getMessage(), exception.getMessage());
-    }
-
-    // SFTPFileSystemProvider.getFileSystem
-
-    @Test
-    @SuppressWarnings("resource")
-    void testGetFileSystemExisting() throws IOException {
-        try (FileSystem fs = newFileSystem(createEnv())) {
-            FileSystem existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl()));
-            assertSame(fs, existingFileSystem);
-
-            existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl() + "/"));
-            assertSame(fs, existingFileSystem);
-        }
-    }
-
-    @Test
-    void testGetFileSystemNotExisting() {
-        URI uri = URI.create(getBaseUrl());
-        assertThrows(FileSystemNotFoundException.class, () -> FileSystems.getFileSystem(uri));
-    }
-
-    @Test
-    @SuppressWarnings("resource")
-    void testGetFileSystemClosed() throws IOException {
-        try (FileSystem fs = newFileSystem(createEnv())) {
-            URI uri = URI.create(getBaseUrl());
-            FileSystem existingFileSystem = FileSystems.getFileSystem(uri);
-            assertSame(fs, existingFileSystem);
-
-            fs.close();
-            assertThrows(FileSystemNotFoundException.class, () -> FileSystems.getFileSystem(uri));
-        }
-    }
-
-    // SFTPFileSystemProvider.removeFileSystem
 
     @Test
     void testRemoveFileSystem() throws IOException {
@@ -211,219 +228,309 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
     }
 
-    // SFTPFileSystemProvider.getPath
+    @Nested
+    class NormalizeWithoutPassword {
 
-    @Test
-    void testGetPath() throws IOException {
-        Map<String, String> inputs = new HashMap<>();
-        inputs.put("/", "/");
-        inputs.put("foo", "/home/foo");
-        inputs.put("/foo", "/foo");
-        inputs.put("foo/bar", "/home/foo/bar");
-        inputs.put("/foo/bar", "/foo/bar");
+        @Test
+        void testMinimalURI() {
+            URI uri = getURI();
+            assertSame(uri, SFTPFileSystemProvider.normalizeWithoutPassword(uri));
+        }
 
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            for (Map.Entry<String, String> entry : inputs.entrySet()) {
-                URI uri = fs.getPath(entry.getKey()).toUri();
-                Path path = provider.getPath(uri);
-                assertThat(path, instanceOf(SFTPPath.class));
-                assertEquals(entry.getValue(), ((SFTPPath) path).path());
+        @Test
+        void testWithOnlyUserName() {
+            URI uri = URI.create(getBaseUrl());
+            assertEquals(uri, SFTPFileSystemProvider.normalizeWithoutPassword(uri));
+        }
+
+        @Test
+        void testWithUserNameAndPassword() {
+            URI uri = URI.create(getBaseUrlWithCredentials());
+            URI expected = URI.create(getBaseUrl());
+            assertEquals(expected, SFTPFileSystemProvider.normalizeWithoutPassword(uri));
+        }
+
+        @Test
+        void testWithPath() {
+            testNormalizeWithoutPassword("/");
+        }
+
+        @Test
+        void testWithQuery() {
+            testNormalizeWithoutPassword("?q=v");
+        }
+
+        @Test
+        void testWithFragment() {
+            testNormalizeWithoutPassword("#id");
+        }
+
+        private void testNormalizeWithoutPassword(String uriAddition) {
+            URI uri = getURI().resolve(uriAddition);
+            assertEquals(getURI(), SFTPFileSystemProvider.normalizeWithoutPassword(uri));
+        }
+    }
+
+    @Nested
+    class NormalizeWithUsername {
+
+        @Test
+        void testMinimalURIWithout() {
+            URI uri = getURI();
+            assertSame(uri, SFTPFileSystemProvider.normalizeWithUsername(uri, null));
+        }
+
+        @Test
+        void testMinimalURIWithUsername() {
+            URI uri = getURI();
+            assertEquals(URI.create(getBaseUrl()), SFTPFileSystemProvider.normalizeWithUsername(uri, getUsername()));
+        }
+
+        @Test
+        void testWithPath() {
+            testNormalizeWithoutPassword("/");
+        }
+
+        @Test
+        void testWithQuery() {
+            testNormalizeWithoutPassword("?q=v");
+        }
+
+        @Test
+        void testWithFragment() {
+            testNormalizeWithoutPassword("#id");
+        }
+
+        private void testNormalizeWithoutPassword(String uriAddition) {
+            URI uri = getURI().resolve(uriAddition);
+            assertEquals(URI.create(getBaseUrl()), SFTPFileSystemProvider.normalizeWithUsername(uri, getUsername()));
+        }
+    }
+
+    @Nested
+    class GetPath {
+
+        @Test
+        void testSuccess() throws IOException {
+            Map<String, String> inputs = new HashMap<>();
+            inputs.put("/", "/");
+            inputs.put("foo", "/home/foo");
+            inputs.put("/foo", "/foo");
+            inputs.put("foo/bar", "/home/foo/bar");
+            inputs.put("/foo/bar", "/foo/bar");
+
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                for (Map.Entry<String, String> entry : inputs.entrySet()) {
+                    URI uri = fs.getPath(entry.getKey()).toUri();
+                    Path path = provider.getPath(uri);
+                    assertThat(path, instanceOf(SFTPPath.class));
+                    assertEquals(entry.getValue(), ((SFTPPath) path).path());
+                }
+                for (Map.Entry<String, String> entry : inputs.entrySet()) {
+                    URI uri = fs.getPath(entry.getKey()).toUri();
+                    uri = URISupport.create(uri.getScheme().toUpperCase(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(),
+                            null, null);
+                    Path path = provider.getPath(uri);
+                    assertThat(path, instanceOf(SFTPPath.class));
+                    assertEquals(entry.getValue(), ((SFTPPath) path).path());
+                }
             }
-            for (Map.Entry<String, String> entry : inputs.entrySet()) {
-                URI uri = fs.getPath(entry.getKey()).toUri();
-                uri = URISupport.create(uri.getScheme().toUpperCase(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), null, null);
-                Path path = provider.getPath(uri);
-                assertThat(path, instanceOf(SFTPPath.class));
-                assertEquals(entry.getValue(), ((SFTPPath) path).path());
+        }
+
+        @Test
+        void testNoScheme() {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create("/foo/bar");
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
+            assertChainEquals(Messages.uri().notAbsolute(uri), exception);
+        }
+
+        @Test
+        void testInvalidScheme() {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create("https://www.github.com/");
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
+            assertChainEquals(Messages.uri().invalidScheme(uri, "sftp"), exception);
+        }
+
+        @Test
+        void testFileSystemNotFound() {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create("sftp://sftp.github.com/");
+            FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
+            assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
+            assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
+        }
+    }
+
+    @Nested
+    class IsSameFile {
+
+        @Test
+        void testWithDifferentTypes() throws IOException {
+
+            SFTPFileSystemProvider sftpProvider = new SFTPFileSystemProvider();
+
+            @SuppressWarnings("resource")
+            FileSystem defaultFileSystem = FileSystems.getDefault();
+            FileSystemProvider defaultProvider = defaultFileSystem.provider();
+
+            try (SFTPFileSystem fs1 = newFileSystem(sftpProvider, createEnv())) {
+                SFTPPath path1 = new SFTPPath(fs1, "pom.xml");
+                Path path2 = Paths.get("pom.xml");
+
+                assertFalse(sftpProvider.isSameFile(path1, path2));
+                assertFalse(defaultProvider.isSameFile(path2, path1));
             }
         }
     }
 
-    @Test
-    void testGetPathNoScheme() {
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        URI uri = URI.create("/foo/bar");
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
-        assertChainEquals(Messages.uri().notAbsolute(uri), exception);
-    }
+    @Nested
+    class GetFileAttributeView {
 
-    @Test
-    void testGetPathInvalidScheme() {
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        URI uri = URI.create("https://www.github.com/");
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> provider.getPath(uri));
-        assertChainEquals(Messages.uri().invalidScheme(uri, "sftp"), exception);
-    }
+        @Test
+        void testBasic() throws IOException {
+            Path foo = addDirectory("/foo/bar");
 
-    @Test
-    void testGetPathFileSystemNotFound() {
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        URI uri = URI.create("sftp://sftp.github.com/");
-        FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
-        assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
-        assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
-    }
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                SFTPPath path = new SFTPPath(fs, "/foo/bar");
 
-    // SFTPFileSystemProvider.isSameFile
+                BasicFileAttributeView view = fs.provider().getFileAttributeView(path, BasicFileAttributeView.class);
+                assertNotNull(view);
+                assertEquals("basic", view.name());
 
-    @Test
-    void testIsSameFileWithDifferentTypes() throws IOException {
+                assertDoesNotThrow(() -> view.setTimes(null, null, null));
 
-        SFTPFileSystemProvider sftpProvider = new SFTPFileSystemProvider();
+                FileTime fileTime = FileTime.fromMillis(0);
 
-        @SuppressWarnings("resource")
-        FileSystem defaultFileSystem = FileSystems.getDefault();
-        FileSystemProvider defaultProvider = defaultFileSystem.provider();
+                view.setTimes(fileTime, null, null);
+                assertEquals(fileTime, Files.readAttributes(foo, BasicFileAttributes.class).lastModifiedTime());
 
-        try (SFTPFileSystem fs1 = newFileSystem(sftpProvider, createEnv())) {
-            SFTPPath path1 = new SFTPPath(fs1, "pom.xml");
-            Path path2 = Paths.get("pom.xml");
+                IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
+                IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+                assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime"), cause);
 
-            assertFalse(sftpProvider.isSameFile(path1, path2));
-            assertFalse(defaultProvider.isSameFile(path2, path1));
+                exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
+                cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+                assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime"), cause);
+            }
+        }
+
+        @Test
+        void testFileOwner() throws IOException {
+            addDirectory("/foo/bar");
+
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                SFTPPath path = new SFTPPath(fs, "/foo/bar");
+
+                FileOwnerAttributeView view = fs.provider().getFileAttributeView(path, FileOwnerAttributeView.class);
+                assertNotNull(view);
+
+                assertNotNull(view.getOwner());
+                assertNotNull(view.getOwner().getName());
+            }
+        }
+
+        @Test
+        void testPosix() throws IOException {
+            Path foo = addDirectory("/foo/bar");
+
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                SFTPPath path = new SFTPPath(fs, "/foo/bar");
+
+                PosixFileAttributeView view = fs.provider().getFileAttributeView(path, PosixFileAttributeView.class);
+                assertNotNull(view);
+                assertEquals("posix", view.name());
+
+                assertNotNull(view.getOwner());
+                assertNotNull(view.getOwner().getName());
+
+                FileTime fileTime = FileTime.fromMillis(0);
+
+                view.setTimes(fileTime, null, null);
+                assertEquals(fileTime, Files.readAttributes(foo, BasicFileAttributes.class).lastModifiedTime());
+
+                IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
+                IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+                assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime"), cause);
+
+                exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
+                cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+                assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime"), cause);
+            }
+        }
+
+        @Test
+        void testOther() throws IOException {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                SFTPPath path = new SFTPPath(fs, "/foo/bar");
+
+                DosFileAttributeView view = fs.provider().getFileAttributeView(path, DosFileAttributeView.class);
+                assertNull(view);
+            }
+        }
+
+        @Test
+        void testReadAttributes() throws IOException {
+            addDirectory("/foo/bar");
+
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                SFTPPath path = new SFTPPath(fs, "/foo/bar");
+
+                BasicFileAttributeView view = fs.provider().getFileAttributeView(path, BasicFileAttributeView.class);
+                assertNotNull(view);
+
+                BasicFileAttributes attributes = view.readAttributes();
+                assertTrue(attributes.isDirectory());
+            }
         }
     }
 
-    // SFTPFileSystemProvider.getFileAttributeView
+    @Nested
+    class KeepAlive {
 
-    @Test
-    void testGetFileAttributeViewBasic() throws IOException {
-        Path foo = addDirectory("/foo/bar");
+        @Test
+        void testWithFTPFileSystem() throws IOException {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                assertDoesNotThrow(() -> SFTPFileSystemProvider.keepAlive(fs));
+            }
+        }
 
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            SFTPPath path = new SFTPPath(fs, "/foo/bar");
+        @Test
+        void testWithNonFTPFileSystem() {
+            @SuppressWarnings("resource")
+            FileSystem defaultFileSystem = FileSystems.getDefault();
+            assertThrows(ProviderMismatchException.class, () -> SFTPFileSystemProvider.keepAlive(defaultFileSystem));
+        }
 
-            BasicFileAttributeView view = fs.provider().getFileAttributeView(path, BasicFileAttributeView.class);
-            assertNotNull(view);
-            assertEquals("basic", view.name());
-
-            assertDoesNotThrow(() -> view.setTimes(null, null, null));
-
-            FileTime fileTime = FileTime.fromMillis(0);
-
-            view.setTimes(fileTime, null, null);
-            assertEquals(fileTime, Files.readAttributes(foo, BasicFileAttributes.class).lastModifiedTime());
-
-            IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
-            IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime"), cause);
-
-            exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
-            cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime"), cause);
+        @Test
+        void testWithNullFTPFileSystem() {
+            assertThrows(ProviderMismatchException.class, () -> SFTPFileSystemProvider.keepAlive(null));
         }
     }
 
-    @Test
-    void testGetFileAttributeViewFileOwner() throws IOException {
-        addDirectory("/foo/bar");
+    @Nested
+    class CreateDirectory {
 
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            SFTPPath path = new SFTPPath(fs, "/foo/bar");
+        @Test
+        void testThroughCreateDirectories() throws IOException {
+            addDirectory("/foo/bar");
 
-            FileOwnerAttributeView view = fs.provider().getFileAttributeView(path, FileOwnerAttributeView.class);
-            assertNotNull(view);
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
+                SFTPPath path = new SFTPPath(fs, "/foo/bar");
+                Files.createDirectories(path);
+            }
 
-            assertNotNull(view.getOwner());
-            assertNotNull(view.getOwner().getName());
+            assertTrue(Files.exists(getPath("/foo/bar")));
         }
-    }
-
-    @Test
-    void testGetFileAttributeViewPosix() throws IOException {
-        Path foo = addDirectory("/foo/bar");
-
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            SFTPPath path = new SFTPPath(fs, "/foo/bar");
-
-            PosixFileAttributeView view = fs.provider().getFileAttributeView(path, PosixFileAttributeView.class);
-            assertNotNull(view);
-            assertEquals("posix", view.name());
-
-            assertNotNull(view.getOwner());
-            assertNotNull(view.getOwner().getName());
-
-            FileTime fileTime = FileTime.fromMillis(0);
-
-            view.setTimes(fileTime, null, null);
-            assertEquals(fileTime, Files.readAttributes(foo, BasicFileAttributes.class).lastModifiedTime());
-
-            IOException exception = assertThrows(IOException.class, () -> view.setTimes(null, fileTime, null));
-            IllegalArgumentException cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("lastAccessTime"), cause);
-
-            exception = assertThrows(IOException.class, () -> view.setTimes(null, null, fileTime));
-            cause = assertInstanceOf(IllegalArgumentException.class, exception.getCause());
-            assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttribute("creationTime"), cause);
-        }
-    }
-
-    @Test
-    void testGetFileAttributeViewOther() throws IOException {
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            SFTPPath path = new SFTPPath(fs, "/foo/bar");
-
-            DosFileAttributeView view = fs.provider().getFileAttributeView(path, DosFileAttributeView.class);
-            assertNull(view);
-        }
-    }
-
-    @Test
-    void testGetFileAttributeViewReadAttributes() throws IOException {
-        addDirectory("/foo/bar");
-
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            SFTPPath path = new SFTPPath(fs, "/foo/bar");
-
-            BasicFileAttributeView view = fs.provider().getFileAttributeView(path, BasicFileAttributeView.class);
-            assertNotNull(view);
-
-            BasicFileAttributes attributes = view.readAttributes();
-            assertTrue(attributes.isDirectory());
-        }
-    }
-
-    // SFTPFileSystemProvider.keepAlive
-
-    @Test
-    void testKeepAliveWithFTPFileSystem() throws IOException {
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            assertDoesNotThrow(() -> SFTPFileSystemProvider.keepAlive(fs));
-        }
-    }
-
-    @Test
-    void testKeepAliveWithNonFTPFileSystem() {
-        @SuppressWarnings("resource")
-        FileSystem defaultFileSystem = FileSystems.getDefault();
-        assertThrows(ProviderMismatchException.class, () -> SFTPFileSystemProvider.keepAlive(defaultFileSystem));
-    }
-
-    @Test
-    void testKeepAliveWithNullFTPFileSystem() {
-        assertThrows(ProviderMismatchException.class, () -> SFTPFileSystemProvider.keepAlive(null));
-    }
-
-    // SFTPFileSystemProvider.createDirectory through Files.createDirectories
-
-    @Test
-    void testCreateDirectories() throws IOException {
-        addDirectory("/foo/bar");
-
-        SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-        try (SFTPFileSystem fs = newFileSystem(provider, createEnv())) {
-            SFTPPath path = new SFTPPath(fs, "/foo/bar");
-            Files.createDirectories(path);
-        }
-
-        assertTrue(Files.exists(getPath("/foo/bar")));
     }
 
     private SFTPFileSystem newFileSystem(Map<String, ?> env) throws IOException {

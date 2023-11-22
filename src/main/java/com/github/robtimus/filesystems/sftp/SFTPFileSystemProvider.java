@@ -126,7 +126,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     /**
      * Returns an existing {@code FileSystem} created by this provider.
      * <p>
-     * The URI must have a {@link URI#getScheme() scheme} equal to {@link #getScheme()}, and no {@link URI#getPath() path},
+     * The URI must have a {@link URI#getScheme() scheme} equal to {@link #getScheme()}, and no non-empty {@link URI#getPath() path},
      * {@link URI#getQuery() query} or {@link URI#getFragment() fragment}. Because the original credentials were possibly provided through an
      * environment map, the URI can contain {@link URI#getUserInfo() user information}, although this should not contain a password for security
      * reasons.
@@ -175,7 +175,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         if (uri.isOpaque()) {
             throw Messages.uri().notHierarchical(uri);
         }
-        if (!allowPath && uri.getPath() != null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())) { //$NON-NLS-1$
+        if (!allowPath && !hasEmptyPath(uri) && !"/".equals(uri.getPath())) { //$NON-NLS-1$
             throw Messages.uri().hasPath(uri);
         }
         if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
@@ -186,6 +186,10 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         }
     }
 
+    private static boolean hasEmptyPath(URI uri) {
+        return uri.getPath() == null || uri.getPath().isEmpty();
+    }
+
     void removeFileSystem(URI uri) {
         URI normalizedURI = normalizeWithoutPassword(uri);
         fileSystems.remove(normalizedURI);
@@ -193,7 +197,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
 
     static URI normalizeWithoutPassword(URI uri) {
         String userInfo = uri.getUserInfo();
-        if (userInfo == null && uri.getPath() == null && uri.getQuery() == null && uri.getFragment() == null) {
+        if (userInfo == null && hasEmptyPath(uri) && uri.getQuery() == null && uri.getFragment() == null) {
             // nothing to normalize, return the URI
             return uri;
         }
@@ -207,7 +211,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     }
 
     static URI normalizeWithUsername(URI uri, String username) {
-        if (username == null && uri.getUserInfo() == null && uri.getPath() == null && uri.getQuery() == null && uri.getFragment() == null) {
+        if (username == null && uri.getUserInfo() == null && hasEmptyPath(uri) && uri.getQuery() == null && uri.getFragment() == null) {
             // nothing to normalize or add, return the URI
             return uri;
         }

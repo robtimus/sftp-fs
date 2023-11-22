@@ -247,6 +247,10 @@ abstract class AbstractSFTPFileSystemTest {
         return URI.create("sftp://localhost:" + port);
     }
 
+    protected final String getUsername() {
+        return USERNAME;
+    }
+
     protected final String getDefaultDir() {
         return "/" + rootPath.relativize(defaultDir);
     }

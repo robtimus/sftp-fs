@@ -31,6 +31,7 @@ import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileOwnerAttributeView;
 import java.nio.file.attribute.PosixFileAttributeView;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -91,39 +92,47 @@ class SFTPFileStoreTest extends AbstractSFTPFileSystemTest {
         assertEquals(ChannelSftp.SSH_FX_OP_UNSUPPORTED, cause.id);
     }
 
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(classes = { BasicFileAttributeView.class, FileOwnerAttributeView.class, PosixFileAttributeView.class })
-    void testSupportsFileAttributeView(Class<? extends FileAttributeView> type) {
-        assertTrue(fileStore.supportsFileAttributeView(type));
+    @Nested
+    class SupportsFileAttributeView {
+
+        @ParameterizedTest(name = "{0}")
+        @ValueSource(classes = { BasicFileAttributeView.class, FileOwnerAttributeView.class, PosixFileAttributeView.class })
+        void testSupportedWithType(Class<? extends FileAttributeView> type) {
+            assertTrue(fileStore.supportsFileAttributeView(type));
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @ValueSource(classes = { DosFileAttributeView.class, AclFileAttributeView.class })
+        void testNotSupportedWithType(Class<? extends FileAttributeView> type) {
+            assertFalse(fileStore.supportsFileAttributeView(type));
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @ValueSource(strings = { "basic", "owner", "posix" })
+        void testSupportedWithName(String name) {
+            assertTrue(fileStore.supportsFileAttributeView(name));
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @ValueSource(strings = { "dos", "acl" })
+        void testNotSupportedWithName(String name) {
+            assertFalse(fileStore.supportsFileAttributeView(name));
+        }
     }
 
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(classes = { DosFileAttributeView.class, AclFileAttributeView.class })
-    void testSupportsFileAttributeViewNotSupported(Class<? extends FileAttributeView> type) {
-        assertFalse(fileStore.supportsFileAttributeView(type));
-    }
+    @Nested
+    class GetAttribute {
 
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = { "basic", "owner", "posix" })
-    void testSupportsFileAttributeView(String name) {
-        assertTrue(fileStore.supportsFileAttributeView(name));
-    }
+        @ParameterizedTest(name = "{0}")
+        @ValueSource(strings = { "totalSpace", "usableSpace", "unallocatedSpace" })
+        void testSupported(String attribute) throws IOException {
+            assertNotNull(fileStore.getAttribute(attribute));
+        }
 
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = { "dos", "acl" })
-    void testSupportsFileAttributeViewNotSupported(String name) {
-        assertFalse(fileStore.supportsFileAttributeView(name));
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = { "totalSpace", "usableSpace", "unallocatedSpace" })
-    void testGetAttribute(String attribute) throws IOException {
-        assertNotNull(fileStore.getAttribute(attribute));
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = { "size", "owner" })
-    void testGetAttributeNotSupported(String attribute) {
-        assertThrows(UnsupportedOperationException.class, () -> fileStore.getAttribute(attribute));
+        @ParameterizedTest(name = "{0}")
+        @ValueSource(strings = { "size", "owner" })
+        void testNotSupported(String attribute) {
+            assertThrows(UnsupportedOperationException.class, () -> fileStore.getAttribute(attribute));
+        }
     }
 }
