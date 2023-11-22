@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
@@ -62,7 +63,6 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
     @Test
     void testPathsAndFilesSupport() throws IOException {
-
         try (SFTPFileSystem fs = newFileSystem(createEnv())) {
             Path path = Paths.get(URI.create(getBaseUrl() + "/foo"));
             assertThat(path, instanceOf(SFTPPath.class));
@@ -103,6 +103,91 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> Paths.get(uri));
         assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
         assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
+    }
+
+    // SFTPFileSystemProvider.newFileSystem
+
+    @Test
+    void testNewFileSystemWithMinimalEnv() throws IOException {
+        URI uri = URI.create(getBaseUrlWithCredentials() + "/" + getDefaultDir());
+        try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalEnv())) {
+            Path path = fs.getPath("");
+            assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+        }
+    }
+
+    @Test
+    void testNewFileSystemWithMinimalIdentityEnv() throws IOException {
+        URI uri = URI.create(getBaseUrl() + "/" + getDefaultDir());
+        try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalIdentityEnv())) {
+            Path path = fs.getPath("");
+            assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+        }
+    }
+
+    @Test
+    void testNewFileSystemWithUserInfoAndCredentials() {
+        URI uri = URI.create(getBaseUrl());
+        SFTPEnvironment env = createEnv();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+        assertEquals(Messages.uri().hasUserInfo(uri).getMessage(), exception.getMessage());
+    }
+
+    @Test
+    void testNewFileSystemWithPathAndDefaultDir() {
+        URI uri = getURI().resolve("/path");
+        SFTPEnvironment env = createEnv();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+        assertEquals(Messages.uri().hasPath(uri).getMessage(), exception.getMessage());
+    }
+
+    @Test
+    void testNewFileSystemWithQuery() {
+        URI uri = getURI().resolve("?q=v");
+        SFTPEnvironment env = createEnv();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+        assertEquals(Messages.uri().hasQuery(uri).getMessage(), exception.getMessage());
+    }
+
+    @Test
+    void testNewFileSystemWithFragment() {
+        URI uri = getURI().resolve("#id");
+        SFTPEnvironment env = createEnv();
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+        assertEquals(Messages.uri().hasFragment(uri).getMessage(), exception.getMessage());
+    }
+
+    // SFTPFileSystemProvider.getFileSystem
+
+    @Test
+    @SuppressWarnings("resource")
+    void testGetFileSystemExisting() throws IOException {
+        try (FileSystem fs = newFileSystem(createEnv())) {
+            FileSystem existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl()));
+            assertSame(fs, existingFileSystem);
+
+            existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl() + "/"));
+            assertSame(fs, existingFileSystem);
+        }
+    }
+
+    @Test
+    void testGetFileSystemNotExisting() {
+        URI uri = URI.create(getBaseUrl());
+        assertThrows(FileSystemNotFoundException.class, () -> FileSystems.getFileSystem(uri));
+    }
+
+    @Test
+    @SuppressWarnings("resource")
+    void testGetFileSystemClosed() throws IOException {
+        try (FileSystem fs = newFileSystem(createEnv())) {
+            URI uri = URI.create(getBaseUrl());
+            FileSystem existingFileSystem = FileSystems.getFileSystem(uri);
+            assertSame(fs, existingFileSystem);
+
+            fs.close();
+            assertThrows(FileSystemNotFoundException.class, () -> FileSystems.getFileSystem(uri));
+        }
     }
 
     // SFTPFileSystemProvider.removeFileSystem

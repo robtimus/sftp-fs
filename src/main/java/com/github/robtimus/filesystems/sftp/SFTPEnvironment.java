@@ -525,6 +525,14 @@ public class SFTPEnvironment implements Map<String, Object> {
         return this;
     }
 
+    boolean hasUsername() {
+        return containsKey(USERNAME);
+    }
+
+    boolean hasDefaultDir() {
+        return containsKey(DEFAULT_DIR);
+    }
+
     String getUsername() {
         return FileSystemProviderSupport.getValue(this, USERNAME, String.class, null);
     }

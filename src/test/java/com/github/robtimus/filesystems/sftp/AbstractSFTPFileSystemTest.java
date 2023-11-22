@@ -97,7 +97,7 @@ abstract class AbstractSFTPFileSystemTest {
                 }
             }
             // public key parsing based on https://gist.github.com/destan/b708d11bd4f403506d6d5bb5fe6a82c5
-            String publicKeyContent = new String(output.toString("UTF-8"))
+            String publicKeyContent = output.toString("UTF-8")
                     .replace("\\n", "")
                     .replace("-----BEGIN PUBLIC KEY-----", "")
                     .replace("-----END PUBLIC KEY-----", "");
@@ -175,13 +175,22 @@ abstract class AbstractSFTPFileSystemTest {
     }
 
     protected static SFTPEnvironment createEnv() {
-        return new SFTPEnvironment()
+        return createMinimalEnv()
                 .withUsername(USERNAME)
                 .withUserInfo(new SimpleUserInfo(PASSWORD.toCharArray()))
+                .withDefaultDirectory(defaultDir.getFileName().toString());
+    }
+
+    protected static SFTPEnvironment createMinimalEnv() {
+        return new SFTPEnvironment()
                 .withHostKeyRepository(TrustAllHostKeyRepository.INSTANCE)
-                .withDefaultDirectory(defaultDir.getFileName().toString())
                 .withPoolConfig(SFTPPoolConfig.custom().withMaxSize(1).build())
                 .withFileSystemExceptionFactory(exceptionFactory);
+    }
+
+    protected static SFTPEnvironment createMinimalIdentityEnv() {
+        return createMinimalEnv()
+                .withIdentity(Identity.fromFiles(IdentityTest.PRIVATE_KEY_FILE, IdentityTest.PASSPHRASE_STRING));
     }
 
     @BeforeEach
@@ -230,8 +239,16 @@ abstract class AbstractSFTPFileSystemTest {
         return "sftp://" + USERNAME + "@localhost:" + port;
     }
 
+    protected final String getBaseUrlWithCredentials() {
+        return "sftp://" + USERNAME + ":" + PASSWORD + "@localhost:" + port;
+    }
+
     protected final URI getURI() {
         return URI.create("sftp://localhost:" + port);
+    }
+
+    protected final String getDefaultDir() {
+        return "/" + rootPath.relativize(defaultDir);
     }
 
     protected final SFTPFileSystemProvider provider() {

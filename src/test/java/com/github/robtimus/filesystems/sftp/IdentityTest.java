@@ -42,11 +42,11 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
 
     private static final File BASE_DIR = new File("src/test/resources", IdentityTest.class.getPackage().getName().replace('.', '/'));
 
-    private static final File PRIVATE_KEY_FILE = new File(BASE_DIR, "id_rsa");
+    static final File PRIVATE_KEY_FILE = new File(BASE_DIR, "id_rsa");
 
     private static final File PUBLIC_KEY_FILE = new File(BASE_DIR, "id_rsa.pub");
 
-    private static final String PASSPHRASE_STRING = "1234567890";
+    static final String PASSPHRASE_STRING = "1234567890";
 
     private static final byte[] PRIVATE_KEY = readContent(PRIVATE_KEY_FILE);
 
