@@ -317,6 +317,12 @@ abstract class AbstractSFTPFileSystemTest {
         return directory;
     }
 
+    protected final Path addDirectoryIfNotExists(String path) throws IOException {
+        Path directory = getPath(path);
+        Files.createDirectories(directory);
+        return directory;
+    }
+
     protected final Path addSymLink(String path, Path target) throws IOException {
         Path symLink = getPath(path);
         Path parent = symLink.getParent();

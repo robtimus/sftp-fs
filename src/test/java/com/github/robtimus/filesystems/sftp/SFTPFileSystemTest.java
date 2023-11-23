@@ -17,6 +17,7 @@
 
 package com.github.robtimus.filesystems.sftp;
 
+import static com.github.robtimus.filesystems.SimpleAbstractPath.CURRENT_DIR;
 import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -79,6 +80,7 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata;
@@ -168,6 +170,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             testNoFollowLinks("", "/home");
             testNoFollowLinks("foo/bar", "/home/foo/bar");
             testNoFollowLinks("foo/../bar", "/home/bar");
+            testNoFollowLinks(CURRENT_DIR, "/home");
 
             // symbolic links
             testNoFollowLinks("/hello", "/hello");
@@ -256,6 +259,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             }
             assertFalse(Files.exists(getPath("/foo/bar")));
             assertEquals(0, getChildCount("/foo"));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "/home", CURRENT_DIR })
+        @EmptySource
+        void testDirectory(String dir) {
+            SFTPFileSystemProvider provider = provider();
+            SFTPPath path = createPath(dir);
+
+            AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> provider.newInputStream(path));
+            assertEquals(dir, exception.getFile());
+
+            verify(getExceptionFactory()).createNewInputStreamException(eq(dir), any(SftpException.class));
         }
 
         @Test
@@ -470,38 +486,46 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             }
         }
 
-        @Test
-        void testDirectoryNoCreate() throws IOException {
-            addDirectory("/foo");
+        @ParameterizedTest
+        @ValueSource(strings = { "/foo", CURRENT_DIR })
+        @EmptySource
+        void testDirectoryNoCreate(String dir) throws IOException {
+            addDirectoryIfNotExists(dir);
+
+            int oldChildCount = getChildCount(dir);
 
             SFTPFileSystemProvider provider = provider();
-            SFTPPath path = createPath("/foo");
+            SFTPPath path = createPath(dir);
             OpenOption[] options = { StandardOpenOption.WRITE };
 
             FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.newOutputStream(path, options));
-            assertEquals("/foo", exception.getFile());
-            assertEquals(Messages.fileSystemProvider().isDirectory("/foo").getReason(), exception.getReason());
+            assertEquals(dir, exception.getFile());
+            assertEquals(Messages.fileSystemProvider().isDirectory(dir).getReason(), exception.getReason());
 
             verify(getExceptionFactory(), never()).createNewOutputStreamException(anyString(), any(SftpException.class), anyCollection());
-            assertTrue(Files.isDirectory(getPath("/foo")));
-            assertEquals(0, getChildCount("/foo"));
+            assertTrue(Files.isDirectory(getPath(dir)));
+            assertEquals(oldChildCount, getChildCount(dir));
         }
 
-        @Test
-        void testDirectoryDeleteOnClose() throws IOException {
-            addDirectory("/foo");
+        @ParameterizedTest
+        @ValueSource(strings = { "/foo", CURRENT_DIR })
+        @EmptySource
+        void testDirectoryDeleteOnClose(String dir) throws IOException {
+            addDirectoryIfNotExists(dir);
+
+            int oldChildCount = getChildCount(dir);
 
             SFTPFileSystemProvider provider = provider();
-            SFTPPath path = createPath("/foo");
+            SFTPPath path = createPath(dir);
             OpenOption[] options = { StandardOpenOption.DELETE_ON_CLOSE };
 
             FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.newOutputStream(path, options));
-            assertEquals("/foo", exception.getFile());
-            assertEquals(Messages.fileSystemProvider().isDirectory("/foo").getReason(), exception.getReason());
+            assertEquals(dir, exception.getFile());
+            assertEquals(Messages.fileSystemProvider().isDirectory(dir).getReason(), exception.getReason());
 
             verify(getExceptionFactory(), never()).createNewOutputStreamException(anyString(), any(SftpException.class), anyCollection());
-            assertTrue(Files.isDirectory(getPath("/foo")));
-            assertEquals(0, getChildCount("/foo"));
+            assertTrue(Files.isDirectory(getPath(dir)));
+            assertEquals(oldChildCount, getChildCount(dir));
         }
     }
 
@@ -723,15 +747,30 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             assertArrayEquals(newContents, Files.readAllBytes(bar));
         }
+
+        @ParameterizedTest
+        @ValueSource(strings = { "/home", CURRENT_DIR })
+        @EmptySource
+        void testDirectory(String dir) {
+            SFTPFileSystemProvider provider = provider();
+            SFTPPath path = createPath(dir);
+
+            Set<? extends OpenOption> options = EnumSet.noneOf(StandardOpenOption.class);
+            AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> provider.newByteChannel(path, options));
+            assertEquals(dir, exception.getFile());
+
+            verify(getExceptionFactory()).createNewInputStreamException(eq(dir), any(SftpException.class));
+        }
     }
 
     @Nested
     class NewDirectoryStream {
 
-        @Test
-        void testSuccess() throws IOException {
-
-            try (DirectoryStream<Path> stream = provider().newDirectoryStream(createPath("/"), entry -> true)) {
+        @ParameterizedTest
+        @ValueSource(strings = { "/", CURRENT_DIR })
+        @EmptySource
+        void testSuccess(String dir) throws IOException {
+            try (DirectoryStream<Path> stream = provider().newDirectoryStream(createPath(dir), entry -> true)) {
                 assertNotNull(stream);
                 // don't do anything with the stream, there's a separate test for that
             }
@@ -785,6 +824,20 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertTrue(Files.exists(getPath("/foo/bar")));
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) {
+            SFTPFileSystemProvider provider = provider();
+            SFTPPath path = createPath(dir);
+
+            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> provider.createDirectory(path));
+            assertEquals(dir, exception.getFile());
+
+            verify(getExceptionFactory(), never()).createCreateDirectoryException(anyString(), any(SftpException.class));
+            assertTrue(Files.exists(getPath(dir)));
+        }
+
         @Test
         void testSFTPFailure() {
             // failure: parent does not exist
@@ -824,6 +877,20 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertEquals("/", exception.getFile());
 
             verify(getExceptionFactory()).createDeleteException(eq("/"), any(SftpException.class), eq(true));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) throws IOException {
+            SFTPFileSystemProvider provider = provider();
+            SFTPPath path = createPath(dir);
+
+            assertTrue(Files.exists(getPath(getDefaultDir())));
+
+            provider.delete(path);
+
+            assertFalse(Files.exists(getPath(getDefaultDir())));
         }
 
         @Test
@@ -918,17 +985,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             verify(getExceptionFactory()).createReadLinkException(eq("/foo"), any(SftpException.class));
         }
 
-        @Test
-        void testNoLinkButDirectory() throws IOException {
-            addDirectory("/foo");
+        @ParameterizedTest
+        @ValueSource(strings = { "/foo", CURRENT_DIR })
+        @EmptySource
+        void testNoLinkButDirectory(String dir) throws IOException {
+            addDirectoryIfNotExists(dir);
 
             SFTPFileSystemProvider provider = provider();
-            SFTPPath path = createPath("/foo");
+            SFTPPath path = createPath(dir);
 
             FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.readSymbolicLink(path));
-            assertEquals("/foo", exception.getFile());
+            assertEquals(dir, exception.getFile());
 
-            verify(getExceptionFactory()).createReadLinkException(eq("/foo"), any(SftpException.class));
+            verify(getExceptionFactory()).createReadLinkException(eq(dir), any(SftpException.class));
         }
     }
 
@@ -1157,6 +1226,40 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertTrue(Files.isDirectory(getPath("/baz")));
 
             assertEquals(0, getChildCount("/foo/bar"));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCopyCurrentDir(String dir) throws IOException {
+            addDirectory("/foo");
+
+            CopyOption[] options = {};
+            provider().copy(createPath(dir), createPath("/foo/bar"), options);
+
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isDirectory(getPath("/foo/bar")));
+            assertTrue(Files.isDirectory(getPath(getDefaultDir())));
+
+            assertEquals(getChildCount(getDefaultDir()), getChildCount("/foo/bar"));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCopyToCurrentDir(String dir) throws IOException {
+            addDirectory("/baz");
+            addFile("/baz/qux");
+
+            int oldChildCount = getChildCount(getDefaultDir());
+
+            CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+            provider().copy(createPath("/baz"), createPath(dir), options);
+
+            assertTrue(Files.isDirectory(getPath(getDefaultDir())));
+            assertTrue(Files.isDirectory(getPath("/baz")));
+
+            assertEquals(oldChildCount, getChildCount(getDefaultDir()));
         }
 
         @Test
@@ -1534,6 +1637,40 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             }
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testMoveCurrentDir(String dir) throws IOException {
+            addDirectory("/foo");
+
+            int oldChildCount = getChildCount(getDefaultDir());
+
+            CopyOption[] options = {};
+            provider().move(createPath(dir), createPath("/foo/bar"), options);
+
+            assertTrue(Files.isDirectory(getPath("/foo")));
+            assertTrue(Files.isDirectory(getPath("/foo/bar")));
+            assertFalse(Files.isDirectory(getPath(getDefaultDir())));
+
+            assertEquals(oldChildCount, getChildCount("/foo/bar"));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCopyToCurrentDir(String dir) throws IOException {
+            addDirectory("/baz");
+            addFile("/baz/qux");
+
+            CopyOption[] options = { StandardCopyOption.REPLACE_EXISTING };
+            provider().move(createPath("/baz"), createPath(dir), options);
+
+            assertTrue(Files.isDirectory(getPath(getDefaultDir())));
+            assertFalse(Files.isDirectory(getPath("/baz")));
+
+            assertEquals(1, getChildCount(getDefaultDir()));
+        }
+
         @Test
         void testReplaceFileDifferentFileSystem() throws IOException {
             addDirectory("/foo");
@@ -1666,6 +1803,12 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             assertTrue(provider().isSameFile(createPath(""), createPath("/home")));
             assertTrue(provider().isSameFile(createPath("/home"), createPath("")));
+
+            assertTrue(provider().isSameFile(createPath(CURRENT_DIR), createPath("/home")));
+            assertTrue(provider().isSameFile(createPath("/home"), createPath(CURRENT_DIR)));
+
+            assertTrue(provider().isSameFile(createPath(""), createPath(CURRENT_DIR)));
+            assertTrue(provider().isSameFile(createPath(CURRENT_DIR), createPath("")));
         }
 
         @Test
@@ -1721,6 +1864,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertTrue(provider().isHidden(createPath("/.foo")));
             assertFalse(provider().isHidden(createPath("/foo/bar")));
             assertTrue(provider().isHidden(createPath("/foo/.bar")));
+            assertFalse(provider().isHidden(createPath("")));
+            assertFalse(provider().isHidden(createPath(CURRENT_DIR)));
         }
 
         @Test
@@ -1789,6 +1934,17 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> provider.checkAccess(path, AccessMode.EXECUTE));
             assertEquals("/foo/bar", exception.getFile());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) {
+            SFTPFileSystemProvider provider = provider();
+            SFTPPath path = createPath(dir);
+
+            assertDoesNotThrow(() -> provider.checkAccess(path, AccessMode.READ));
+            assertDoesNotThrow(() -> provider.checkAccess(path, AccessMode.WRITE));
         }
     }
 
@@ -1891,6 +2047,23 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertNotNull(attributes.permissions());
             assertFalse(attributes.isDirectory());
             assertTrue(attributes.isRegularFile());
+            assertFalse(attributes.isSymbolicLink());
+            assertFalse(attributes.isOther());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) throws IOException {
+            PosixFileAttributes attributes = provider().readAttributes(createPath(dir), PosixFileAttributes.class);
+
+            // Directories always have size 0 when using sshd-core
+            assertEquals(0, attributes.size());
+            assertNotNull(attributes.owner().getName());
+            assertNotNull(attributes.group().getName());
+            assertNotNull(attributes.permissions());
+            assertTrue(attributes.isDirectory());
+            assertFalse(attributes.isRegularFile());
             assertFalse(attributes.isSymbolicLink());
             assertFalse(attributes.isOther());
         }
@@ -2356,6 +2529,32 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertEquals(expected, attributes);
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) throws IOException {
+            Map<String, Object> attributes = provider().readAttributes(createPath(dir), "*");
+            Map<String, Object> expected = new HashMap<>();
+            // Directories always have size 0 when using sshd-core
+            expected.put("size", 0L);
+            expected.put("isRegularFile", false);
+            expected.put("isDirectory", true);
+            expected.put("isSymbolicLink", false);
+            expected.put("isOther", false);
+            expected.put("fileKey", null);
+
+            assertNotNull(attributes.remove("lastModifiedTime"));
+            assertNotNull(attributes.remove("lastAccessTime"));
+            assertNotNull(attributes.remove("creationTime"));
+            assertEquals(expected, attributes);
+
+            attributes = provider().readAttributes(createPath(dir), "lastModifiedTime,*");
+            assertNotNull(attributes.remove("lastModifiedTime"));
+            assertNotNull(attributes.remove("lastAccessTime"));
+            assertNotNull(attributes.remove("creationTime"));
+            assertEquals(expected, attributes);
+        }
+
         @Test
         void testUnsupportedAttribute() throws IOException {
             addDirectory("/foo");
@@ -2545,6 +2744,17 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertEquals(lastModifiedTime, provider().readAttributes(path, BasicFileAttributes.class).lastModifiedTime());
         }
 
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) throws IOException {
+            SFTPPath path = createPath(dir);
+            // times are in seconds
+            FileTime lastModifiedTime = FileTime.from(123456789L, TimeUnit.SECONDS);
+            provider().getFileAttributeView(path, BasicFileAttributeView.class).setTimes(lastModifiedTime, null, null);
+            assertEquals(lastModifiedTime, provider().readAttributes(path, BasicFileAttributes.class).lastModifiedTime());
+        }
+
         @Test
         void testNonExisting() {
             SFTPPath path = createPath("/foo/bar");
@@ -2625,6 +2835,29 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             expected.put("gid", 1);
 
             assertAttributesModified(fooPath, expected);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = CURRENT_DIR)
+        @EmptySource
+        void testCurrentDirectory(String dir) throws IOException {
+            Path foo = getPath(getDefaultDir());
+
+            SFTPPath fooPath = createPath(dir);
+            FileTime lastModifiedTime = FileTime.from(123456L, TimeUnit.SECONDS);
+
+            provider().setAttribute(fooPath, "basic:lastModifiedTime", lastModifiedTime);
+            assertEquals(lastModifiedTime, Files.getLastModifiedTime(foo));
+
+            lastModifiedTime = FileTime.from(1234567L, TimeUnit.SECONDS);
+
+            provider().setAttribute(fooPath, "posix:lastModifiedTime", lastModifiedTime);
+            assertEquals(lastModifiedTime, Files.getLastModifiedTime(foo));
+
+            lastModifiedTime = FileTime.from(12345678L, TimeUnit.SECONDS);
+
+            provider().setAttribute(fooPath, "lastModifiedTime", lastModifiedTime);
+            assertEquals(lastModifiedTime, Files.getLastModifiedTime(foo));
         }
 
         @ParameterizedTest(name = "{0}")
