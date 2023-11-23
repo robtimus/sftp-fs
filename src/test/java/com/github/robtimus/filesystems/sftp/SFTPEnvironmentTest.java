@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Nested;
@@ -430,7 +431,7 @@ class SFTPEnvironmentTest {
             Session session = mock(Session.class);
             env.connect(session);
 
-            verify(session).connect();
+            verify(session).connect(Math.toIntExact(TimeUnit.SECONDS.toMillis(30)));
             verify(session).openChannel("sftp");
             verifyNoMoreInteractions(session);
         }

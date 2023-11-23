@@ -65,6 +65,7 @@ public class SFTPEnvironment implements Map<String, Object> {
     // connect support
 
     private static final String CONNECT_TIMEOUT = "connectTimeout"; //$NON-NLS-1$
+    private static final int DEFAULT_CONNECT_TIMEOUT = 30 * 1000; // 30 seconds
 
     // JSch
 
@@ -745,12 +746,8 @@ public class SFTPEnvironment implements Map<String, Object> {
 
     ChannelSftp connect(Session session) throws IOException {
         try {
-            if (containsKey(CONNECT_TIMEOUT)) {
-                int connectTimeout = FileSystemProviderSupport.getIntValue(this, CONNECT_TIMEOUT);
-                session.connect(connectTimeout);
-            } else {
-                session.connect();
-            }
+            int connectTimeout = FileSystemProviderSupport.getIntValue(this, CONNECT_TIMEOUT, DEFAULT_CONNECT_TIMEOUT);
+            session.connect(connectTimeout);
 
             return (ChannelSftp) session.openChannel("sftp"); //$NON-NLS-1$
         } catch (JSchException e) {
