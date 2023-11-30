@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -261,17 +262,30 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertEquals(0, getChildCount("/foo"));
         }
 
+        @Test
+        void testDirectory() {
+            testDirectory("/home", "/home");
+        }
+
         @ParameterizedTest
-        @ValueSource(strings = { "/home", CURRENT_DIR })
+        @ValueSource(strings = CURRENT_DIR)
         @EmptySource
-        void testDirectory(String dir) {
+        void testCurrentDirectory(String dir) {
+            testDirectory(dir, getDefaultDir());
+        }
+
+        private void testDirectory(String dir, String expectedFile) {
             SFTPFileSystemProvider provider = provider();
             SFTPPath path = createPath(dir);
 
-            AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> provider.newInputStream(path));
-            assertEquals(dir, exception.getFile());
-
-            verify(getExceptionFactory()).createNewInputStreamException(eq(dir), any(SftpException.class));
+            // On Windows this will throw an AccessDeniedException when calling provider.newByteChannel
+            // On Linux however that call succeeds, but the backing InputStream is broken
+            IOException exception = assertThrows(IOException.class, () -> newInputStream(provider, path));
+            if (OS.current() == OS.WINDOWS) {
+                AccessDeniedException accessDeniedException = assertInstanceOf(AccessDeniedException.class, exception);
+                assertEquals(expectedFile, accessDeniedException.getFile());
+                verify(getExceptionFactory()).createNewInputStreamException(eq(expectedFile), any(SftpException.class));
+            }
         }
 
         @Test
@@ -281,10 +295,16 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPFileSystemProvider provider = provider();
             SFTPPath path = createPath("/foo/bar");
 
-            NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> provider.newInputStream(path));
+            NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> newInputStream(provider, path));
             assertEquals("/foo/bar", exception.getFile());
 
             verify(getExceptionFactory()).createNewInputStreamException(eq("/foo/bar"), any(SftpException.class));
+        }
+
+        private void newInputStream(SFTPFileSystemProvider provider, SFTPPath path, OpenOption... options) throws IOException {
+            try (InputStream in = provider.newInputStream(path, options)) {
+                in.read();
+            }
         }
     }
 
@@ -367,7 +387,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             OpenOption[] options = { StandardOpenOption.CREATE_NEW };
 
-            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> provider.newOutputStream(path, options));
+            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> newOutputStream(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             // verify that the file system can be used after closing the stream
@@ -388,7 +408,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             OpenOption[] options = { StandardOpenOption.WRITE };
 
-            FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.newOutputStream(path, options));
+            FileSystemException exception = assertThrows(FileSystemException.class, () -> newOutputStream(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             verify(getExceptionFactory()).createNewOutputStreamException(eq("/foo/bar"), any(SftpException.class), anyCollection());
@@ -408,7 +428,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             OpenOption[] options = { StandardOpenOption.DELETE_ON_CLOSE };
 
-            FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.newOutputStream(path, options));
+            FileSystemException exception = assertThrows(FileSystemException.class, () -> newOutputStream(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             verify(getExceptionFactory()).createNewOutputStreamException(eq("/foo/bar"), any(SftpException.class), anyCollection());
@@ -424,7 +444,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             OpenOption[] options = { StandardOpenOption.WRITE };
 
-            NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> provider.newOutputStream(path, options));
+            NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> newOutputStream(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             assertTrue(Files.isDirectory(getPath("/foo")));
@@ -486,10 +506,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             }
         }
 
+        @Test
+        void testDirectoryNoCreate() throws IOException {
+            testDirectoryNoCreate("/foo", "/foo");
+        }
+
         @ParameterizedTest
-        @ValueSource(strings = { "/foo", CURRENT_DIR })
+        @ValueSource(strings = CURRENT_DIR)
         @EmptySource
-        void testDirectoryNoCreate(String dir) throws IOException {
+        void testCurrentDirectoryNoCreate(String dir) throws IOException {
+            testDirectoryNoCreate(dir, getDefaultDir());
+        }
+
+        private void testDirectoryNoCreate(String dir, String expectedFile) throws IOException {
             addDirectoryIfNotExists(dir);
 
             int oldChildCount = getChildCount(dir);
@@ -498,8 +527,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath(dir);
             OpenOption[] options = { StandardOpenOption.WRITE };
 
-            FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.newOutputStream(path, options));
-            assertEquals(dir, exception.getFile());
+            FileSystemException exception = assertThrows(FileSystemException.class, () -> newOutputStream(provider, path, options));
+            assertEquals(expectedFile, exception.getFile());
             assertEquals(Messages.fileSystemProvider().isDirectory(dir).getReason(), exception.getReason());
 
             verify(getExceptionFactory(), never()).createNewOutputStreamException(anyString(), any(SftpException.class), anyCollection());
@@ -507,10 +536,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertEquals(oldChildCount, getChildCount(dir));
         }
 
+        @Test
+        void testDirectoryDeleteOnClose() throws IOException {
+            testDirectoryDeleteOnClose("/foo", "/foo");
+        }
+
         @ParameterizedTest
-        @ValueSource(strings = { "/foo", CURRENT_DIR })
+        @ValueSource(strings = CURRENT_DIR)
         @EmptySource
-        void testDirectoryDeleteOnClose(String dir) throws IOException {
+        void testCurrentDirectoryDeleteOnClose(String dir) throws IOException {
+            testDirectoryDeleteOnClose(dir, getDefaultDir());
+        }
+
+        private void testDirectoryDeleteOnClose(String dir, String expectedFile) throws IOException {
             addDirectoryIfNotExists(dir);
 
             int oldChildCount = getChildCount(dir);
@@ -519,13 +557,19 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath(dir);
             OpenOption[] options = { StandardOpenOption.DELETE_ON_CLOSE };
 
-            FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.newOutputStream(path, options));
-            assertEquals(dir, exception.getFile());
+            FileSystemException exception = assertThrows(FileSystemException.class, () -> newOutputStream(provider, path, options));
+            assertEquals(expectedFile, exception.getFile());
             assertEquals(Messages.fileSystemProvider().isDirectory(dir).getReason(), exception.getReason());
 
             verify(getExceptionFactory(), never()).createNewOutputStreamException(anyString(), any(SftpException.class), anyCollection());
             assertTrue(Files.isDirectory(getPath(dir)));
             assertEquals(oldChildCount, getChildCount(dir));
+        }
+
+        private void newOutputStream(SFTPFileSystemProvider provider, SFTPPath path, OpenOption... options) throws IOException {
+            try (OutputStream out = provider.newOutputStream(path, options)) {
+                out.write(0);
+            }
         }
     }
 
@@ -556,7 +600,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             Set<? extends OpenOption> options = EnumSet.noneOf(StandardOpenOption.class);
 
-            NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> provider.newByteChannel(path, options));
+            NoSuchFileException exception = assertThrows(NoSuchFileException.class, () -> newByteChannel(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             verify(getExceptionFactory()).createNewInputStreamException(eq("/foo/bar"), any(SftpException.class));
@@ -689,7 +733,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
 
-            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> provider.newByteChannel(path, options));
+            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> newByteChannel(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             assertArrayEquals(oldContents, Files.readAllBytes(bar));
@@ -704,7 +748,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath("/foo/bar");
             Set<? extends OpenOption> options = EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.APPEND);
 
-            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> provider.newByteChannel(path, options));
+            FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> newByteChannel(provider, path, options));
             assertEquals("/foo/bar", exception.getFile());
 
             assertArrayEquals(new byte[1024], Files.readAllBytes(bar));
@@ -748,18 +792,37 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertArrayEquals(newContents, Files.readAllBytes(bar));
         }
 
+        @Test
+        void testDirectory() {
+            testDirectory("/home", "/home");
+        }
+
         @ParameterizedTest
-        @ValueSource(strings = { "/home", CURRENT_DIR })
+        @ValueSource(strings = CURRENT_DIR)
         @EmptySource
-        void testDirectory(String dir) {
+        void testCurrentDirectory(String dir) {
+            testDirectory(dir, getDefaultDir());
+        }
+
+        private void testDirectory(String dir, String expectedFile) {
             SFTPFileSystemProvider provider = provider();
             SFTPPath path = createPath(dir);
 
             Set<? extends OpenOption> options = EnumSet.noneOf(StandardOpenOption.class);
-            AccessDeniedException exception = assertThrows(AccessDeniedException.class, () -> provider.newByteChannel(path, options));
-            assertEquals(dir, exception.getFile());
+            // On Windows this will throw an AccessDeniedException when calling provider.newByteChannel
+            // On Linux however that call succeeds, but the backing InputStream is broken
+            IOException exception = assertThrows(IOException.class, () -> newByteChannel(provider, path, options));
+            if (OS.current() == OS.WINDOWS) {
+                AccessDeniedException accessDeniedException = assertInstanceOf(AccessDeniedException.class, exception);
+                assertEquals(expectedFile, accessDeniedException.getFile());
+                verify(getExceptionFactory()).createNewInputStreamException(eq(expectedFile), any(SftpException.class));
+            }
+        }
 
-            verify(getExceptionFactory()).createNewInputStreamException(eq(dir), any(SftpException.class));
+        private void newByteChannel(SFTPFileSystemProvider provider, SFTPPath path, Set<? extends OpenOption> options) throws IOException {
+            try (SeekableByteChannel channel = provider.newByteChannel(path, options)) {
+                channel.read(ByteBuffer.allocate(1));
+            }
         }
     }
 
@@ -832,7 +895,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             SFTPPath path = createPath(dir);
 
             FileAlreadyExistsException exception = assertThrows(FileAlreadyExistsException.class, () -> provider.createDirectory(path));
-            assertEquals(dir, exception.getFile());
+            assertEquals(getDefaultDir(), exception.getFile());
 
             verify(getExceptionFactory(), never()).createCreateDirectoryException(anyString(), any(SftpException.class));
             assertTrue(Files.exists(getPath(dir)));
@@ -985,19 +1048,28 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             verify(getExceptionFactory()).createReadLinkException(eq("/foo"), any(SftpException.class));
         }
 
+        @Test
+        void testNoLinkButDirectory() throws IOException {
+            testNoLinkButDirectory("/foo", "/foo");
+        }
+
         @ParameterizedTest
-        @ValueSource(strings = { "/foo", CURRENT_DIR })
+        @ValueSource(strings = CURRENT_DIR)
         @EmptySource
-        void testNoLinkButDirectory(String dir) throws IOException {
+        void testNoLinkButCurrentDirectory(String dir) throws IOException {
+            testNoLinkButDirectory(dir, getDefaultDir());
+        }
+
+        private void testNoLinkButDirectory(String dir, String expectedFile) throws IOException {
             addDirectoryIfNotExists(dir);
 
             SFTPFileSystemProvider provider = provider();
             SFTPPath path = createPath(dir);
 
             FileSystemException exception = assertThrows(FileSystemException.class, () -> provider.readSymbolicLink(path));
-            assertEquals(dir, exception.getFile());
+            assertEquals(expectedFile, exception.getFile());
 
-            verify(getExceptionFactory()).createReadLinkException(eq(dir), any(SftpException.class));
+            verify(getExceptionFactory()).createReadLinkException(eq(expectedFile), any(SftpException.class));
         }
     }
 

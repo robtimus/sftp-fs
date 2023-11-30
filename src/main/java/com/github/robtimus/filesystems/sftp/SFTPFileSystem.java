@@ -228,7 +228,7 @@ class SFTPFileSystem extends FileSystem {
 
     private SFTPPathAndAttributesPair toRealPath(Channel channel, SFTPPath path, boolean followLinks) throws IOException {
         SFTPPath absPath = toAbsolutePath(path).normalize();
-        SftpATTRS attributes = getAttributes(channel, absPath, false);
+        SftpATTRS attributes = getAttributes(channel, absPath.path(), false);
         if (followLinks && attributes.isLink()) {
             SFTPPath link = readSymbolicLink(channel, absPath);
             return toRealPath(channel, link, followLinks);
@@ -246,6 +246,10 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
+    private String normalizePath(SFTPPath path) {
+        return path.toAbsolutePath().normalize().path();
+    }
+
     String toString(SFTPPath path) {
         return path.path();
     }
@@ -254,26 +258,26 @@ class SFTPFileSystem extends FileSystem {
         OpenOptions openOptions = OpenOptions.forNewInputStream(options);
 
         try (Channel channel = channelPool.get()) {
-            return newInputStream(channel, path, openOptions);
+            return newInputStream(channel, normalizePath(path), openOptions);
         }
     }
 
-    private InputStream newInputStream(Channel channel, SFTPPath path, OpenOptions options) throws IOException {
+    private InputStream newInputStream(Channel channel, String path, OpenOptions options) throws IOException {
         assert options.read;
 
-        return channel.newInputStream(path.path(), options);
+        return channel.newInputStream(path, options);
     }
 
     OutputStream newOutputStream(SFTPPath path, OpenOption... options) throws IOException {
         OpenOptions openOptions = OpenOptions.forNewOutputStream(options);
 
         try (Channel channel = channelPool.get()) {
-            return newOutputStream(channel, path, false, openOptions).out;
+            return newOutputStream(channel, normalizePath(path), false, openOptions).out;
         }
     }
 
     @SuppressWarnings("resource")
-    private SFTPAttributesAndOutputStreamPair newOutputStream(Channel channel, SFTPPath path, boolean requireAttributes, OpenOptions options)
+    private SFTPAttributesAndOutputStreamPair newOutputStream(Channel channel, String path, boolean requireAttributes, OpenOptions options)
             throws IOException {
 
         // retrieve the attributes unless create is true and createNew is false, because then the file can be created
@@ -281,12 +285,12 @@ class SFTPFileSystem extends FileSystem {
         if (!options.create || options.createNew) {
             attributes = findAttributes(channel, path, false);
             if (attributes != null && attributes.isDir()) {
-                throw Messages.fileSystemProvider().isDirectory(path.path());
+                throw Messages.fileSystemProvider().isDirectory(path);
             }
             if (!options.createNew && attributes == null) {
-                throw new NoSuchFileException(path.path());
+                throw new NoSuchFileException(path);
             } else if (options.createNew && attributes != null) {
-                throw new FileAlreadyExistsException(path.path());
+                throw new FileAlreadyExistsException(path);
             }
         }
         // else the file can be created if necessary
@@ -295,7 +299,7 @@ class SFTPFileSystem extends FileSystem {
             attributes = findAttributes(channel, path, false);
         }
 
-        OutputStream out = channel.newOutputStream(path.path(), options);
+        OutputStream out = channel.newOutputStream(path, options);
         return new SFTPAttributesAndOutputStreamPair(attributes, out);
     }
 
@@ -319,17 +323,18 @@ class SFTPFileSystem extends FileSystem {
         OpenOptions openOptions = OpenOptions.forNewByteChannel(options);
 
         try (Channel channel = channelPool.get()) {
+            String normalizedPath = normalizePath(path);
             if (openOptions.read) {
                 // use findAttributes instead of getAttributes, to let the opening of the stream provide the correct error message
-                SftpATTRS attributes = findAttributes(channel, path, false);
-                InputStream in = newInputStream(channel, path, openOptions);
+                SftpATTRS attributes = findAttributes(channel, normalizedPath, false);
+                InputStream in = newInputStream(channel, normalizedPath, openOptions);
                 long size = attributes == null ? 0 : attributes.getSize();
                 return FileSystemProviderSupport.createSeekableByteChannel(in, size);
             }
 
             // if append then we need the attributes, to find the initial position of the channel
             boolean requireAttributes = openOptions.append;
-            SFTPAttributesAndOutputStreamPair outPair = newOutputStream(channel, path, requireAttributes, openOptions);
+            SFTPAttributesAndOutputStreamPair outPair = newOutputStream(channel, normalizedPath, requireAttributes, openOptions);
             long initialPosition = outPair.attributes == null ? 0 : outPair.attributes.getSize();
             if (openOptions.write && !openOptions.append) {
                 initialPosition = 0;
@@ -338,9 +343,10 @@ class SFTPFileSystem extends FileSystem {
         }
     }
 
-    DirectoryStream<Path> newDirectoryStream(final SFTPPath path, Filter<? super Path> filter) throws IOException {
+    DirectoryStream<Path> newDirectoryStream(SFTPPath path, Filter<? super Path> filter) throws IOException {
         try (Channel channel = channelPool.get()) {
-            List<LsEntry> entries = channel.listFiles(path.path());
+            String normalizedPath = normalizePath(path);
+            List<LsEntry> entries = channel.listFiles(normalizedPath);
             boolean isDirectory = false;
             for (Iterator<LsEntry> i = entries.iterator(); i.hasNext(); ) {
                 LsEntry entry = i.next();
@@ -356,7 +362,7 @@ class SFTPFileSystem extends FileSystem {
             if (!isDirectory) {
                 // https://github.com/robtimus/sftp-fs/issues/4: don't fail immediately but check the attributes
                 // Follow links to ensure the directory attribute can be read correctly
-                SftpATTRS attributes = channel.readAttributes(path.path(), true);
+                SftpATTRS attributes = channel.readAttributes(normalizedPath, true);
                 if (!attributes.isDir()) {
                     throw new NotDirectoryException(path.path());
                 }
@@ -394,21 +400,23 @@ class SFTPFileSystem extends FileSystem {
         }
 
         try (Channel channel = channelPool.get()) {
-            channel.mkdir(path.path());
+            channel.mkdir(normalizePath(path));
         }
     }
 
     void delete(SFTPPath path) throws IOException {
         try (Channel channel = channelPool.get()) {
-            SftpATTRS attributes = getAttributes(channel, path, false);
+            String normalizedPath = normalizePath(path);
+            SftpATTRS attributes = getAttributes(channel, normalizedPath, false);
             boolean isDirectory = attributes.isDir();
-            channel.delete(path.path(), isDirectory);
+            channel.delete(normalizedPath, isDirectory);
         }
     }
 
     SFTPPath readSymbolicLink(SFTPPath path) throws IOException {
         try (Channel channel = channelPool.get()) {
-            return readSymbolicLink(channel, path);
+            SFTPPath absPath = toAbsolutePath(path).normalize();
+            return readSymbolicLink(channel, absPath);
         }
     }
 
@@ -440,21 +448,23 @@ class SFTPFileSystem extends FileSystem {
                 // the target does not exist or either path is an invalid link, ignore the error and continue
             }
 
-            SftpATTRS targetAttributes = findAttributes(channel, target, false);
+            String normalizedTarget = normalizePath(target);
+
+            SftpATTRS targetAttributes = findAttributes(channel, normalizedTarget, false);
 
             if (targetAttributes != null) {
                 if (copyOptions.replaceExisting) {
-                    channel.delete(target.path(), targetAttributes.isDir());
+                    channel.delete(normalizedTarget, targetAttributes.isDir());
                 } else {
                     throw new FileAlreadyExistsException(target.path());
                 }
             }
 
             if (sourcePair.attributes.isDir()) {
-                channel.mkdir(target.path());
+                channel.mkdir(normalizedTarget);
             } else {
                 try (Channel channel2 = channelPool.getOrCreate()) {
-                    copyFile(channel, source, channel2, target, copyOptions);
+                    copyFile(channel, normalizePath(source), channel2, normalizedTarget, copyOptions);
                 }
             }
         }
@@ -463,34 +473,45 @@ class SFTPFileSystem extends FileSystem {
     private void copyAcrossFileSystems(Channel sourceChannel, SFTPPath source, SftpATTRS sourceAttributes, SFTPPath target, CopyOptions options)
             throws IOException {
 
-        @SuppressWarnings("resource")
-        SFTPFileSystem targetFileSystem = target.getFileSystem();
+        copyAcrossFileSystems(sourceChannel, normalizePath(source), sourceAttributes, target, options);
+    }
+
+    @SuppressWarnings("resource")
+    private void copyAcrossFileSystems(Channel sourceChannel, String source, SftpATTRS sourceAttributes, SFTPPath target, CopyOptions options)
+            throws IOException {
+
+        copyAcrossFileSystems(sourceChannel, source, sourceAttributes, normalizePath(target), target.getFileSystem(), options);
+    }
+
+    private void copyAcrossFileSystems(Channel sourceChannel, String source, SftpATTRS sourceAttributes, String target,
+            SFTPFileSystem targetFileSystem, CopyOptions options) throws IOException {
+
         try (Channel targetChannel = targetFileSystem.channelPool.getOrCreate()) {
 
             SftpATTRS targetAttributes = findAttributes(targetChannel, target, false);
 
             if (targetAttributes != null) {
                 if (options.replaceExisting) {
-                    targetChannel.delete(target.path(), targetAttributes.isDir());
+                    targetChannel.delete(target, targetAttributes.isDir());
                 } else {
-                    throw new FileAlreadyExistsException(target.path());
+                    throw new FileAlreadyExistsException(target);
                 }
             }
 
             if (sourceAttributes.isDir()) {
-                targetChannel.mkdir(target.path());
+                targetChannel.mkdir(target);
             } else {
                 copyFile(sourceChannel, source, targetChannel, target, options);
             }
         }
     }
 
-    private void copyFile(Channel sourceChannel, SFTPPath source, Channel targetChannel, SFTPPath target, CopyOptions options) throws IOException {
+    private void copyFile(Channel sourceChannel, String source, Channel targetChannel, String target, CopyOptions options) throws IOException {
         OpenOptions inOptions = OpenOptions.forNewInputStream(options.toOpenOptions(StandardOpenOption.READ));
         OpenOptions outOptions = OpenOptions
                 .forNewOutputStream(options.toOpenOptions(StandardOpenOption.WRITE, StandardOpenOption.CREATE));
-        try (InputStream in = sourceChannel.newInputStream(source.path(), inOptions)) {
-            targetChannel.storeFile(target.path(), in, outOptions.options);
+        try (InputStream in = sourceChannel.newInputStream(source, inOptions)) {
+            targetChannel.storeFile(target, in, outOptions.options);
         }
     }
 
@@ -499,13 +520,14 @@ class SFTPFileSystem extends FileSystem {
         CopyOptions copyOptions = CopyOptions.forMove(sameFileSystem, options);
 
         try (Channel channel = channelPool.get()) {
+            String normalizedSource = normalizePath(source);
             if (!sameFileSystem) {
-                SftpATTRS attributes = getAttributes(channel, source, false);
+                SftpATTRS attributes = getAttributes(channel, normalizedSource, false);
                 if (attributes.isLink()) {
                     throw new IOException(SFTPMessages.copyOfSymbolicLinksAcrossFileSystemsNotSupported());
                 }
-                copyAcrossFileSystems(channel, source, attributes, target, copyOptions);
-                channel.delete(source.path(), attributes.isDir());
+                copyAcrossFileSystems(channel, normalizedSource, attributes, target, copyOptions);
+                channel.delete(normalizedSource, attributes.isDir());
                 return;
             }
 
@@ -518,7 +540,7 @@ class SFTPFileSystem extends FileSystem {
                 // the source or target does not exist or either path is an invalid link
                 // call getAttributes to ensure the source file exists
                 // ignore any error to target or if the source link is invalid
-                getAttributes(channel, source, false);
+                getAttributes(channel, normalizedSource, false);
             }
 
             if (toAbsolutePath(source).parentPath() == null) {
@@ -526,12 +548,13 @@ class SFTPFileSystem extends FileSystem {
                 throw new DirectoryNotEmptyException(source.path());
             }
 
-            SftpATTRS targetAttributes = findAttributes(channel, target, false);
+            String normalizedTarget = normalizePath(target);
+            SftpATTRS targetAttributes = findAttributes(channel, normalizedTarget, false);
             if (copyOptions.replaceExisting && targetAttributes != null) {
-                channel.delete(target.path(), targetAttributes.isDir());
+                channel.delete(normalizedTarget, targetAttributes.isDir());
             }
 
-            channel.rename(source.path(), target.path());
+            channel.rename(normalizedSource, normalizedTarget);
         }
     }
 
@@ -562,7 +585,7 @@ class SFTPFileSystem extends FileSystem {
     boolean isHidden(SFTPPath path) throws IOException {
         // call getAttributes to check for existence
         try (Channel channel = channelPool.get()) {
-            getAttributes(channel, path, false);
+            getAttributes(channel, normalizePath(path), false);
         }
         String fileName = path.fileName();
         return !CURRENT_DIR.equals(fileName) && !PARENT_DIR.equals(fileName) && fileName.startsWith("."); //$NON-NLS-1$
@@ -571,14 +594,14 @@ class SFTPFileSystem extends FileSystem {
     FileStore getFileStore(SFTPPath path) throws IOException {
         // call getAttributes to check for existence
         try (Channel channel = channelPool.get()) {
-            getAttributes(channel, path, false);
+            getAttributes(channel, normalizePath(path), false);
         }
         return new SFTPFileStore(path);
     }
 
     void checkAccess(SFTPPath path, AccessMode... modes) throws IOException {
         try (Channel channel = channelPool.get()) {
-            SftpATTRS attributes = getAttributes(channel, path, true);
+            SftpATTRS attributes = getAttributes(channel, normalizePath(path), true);
             for (AccessMode mode : modes) {
                 if (!hasAccess(attributes, mode)) {
                     throw new AccessDeniedException(path.path());
@@ -651,7 +674,7 @@ class SFTPFileSystem extends FileSystem {
             if (lastModifiedTime != null) {
                 try (Channel channel = channelPool.get()) {
                     // times are in seconds
-                    channel.setMtime(pathToUpdate(channel).path(), lastModifiedTime.to(TimeUnit.SECONDS));
+                    channel.setMtime(pathToUpdate(channel), lastModifiedTime.to(TimeUnit.SECONDS));
                 }
             }
         }
@@ -661,7 +684,7 @@ class SFTPFileSystem extends FileSystem {
             try {
                 int uid = Integer.parseInt(owner.getName());
                 try (Channel channel = channelPool.get()) {
-                    channel.chown(pathToUpdate(channel).path(), uid);
+                    channel.chown(pathToUpdate(channel), uid);
                 }
             } catch (NumberFormatException e) {
                 throw new IOException(e);
@@ -673,7 +696,7 @@ class SFTPFileSystem extends FileSystem {
             try {
                 int gid = Integer.parseInt(group.getName());
                 try (Channel channel = channelPool.get()) {
-                    channel.chgrp(pathToUpdate(channel).path(), gid);
+                    channel.chgrp(pathToUpdate(channel), gid);
                 }
             } catch (NumberFormatException e) {
                 throw new IOException(e);
@@ -683,18 +706,19 @@ class SFTPFileSystem extends FileSystem {
         @Override
         public void setPermissions(Set<PosixFilePermission> permissions) throws IOException {
             try (Channel channel = channelPool.get()) {
-                channel.chmod(pathToUpdate(channel).path(), PosixFilePermissionSupport.toMask(permissions));
+                channel.chmod(pathToUpdate(channel), PosixFilePermissionSupport.toMask(permissions));
             }
         }
 
-        private SFTPPath pathToUpdate(Channel channel) throws IOException {
-            return followLinks ? toRealPath(channel, path, followLinks).path : path;
+        private String pathToUpdate(Channel channel) throws IOException {
+            return followLinks ? toRealPath(channel, path, followLinks).path.path() : normalizePath(path);
         }
     }
 
     PosixFileAttributes readAttributes(SFTPPath path, boolean followLinks) throws IOException {
+
         try (Channel channel = channelPool.get()) {
-            SftpATTRS attributes = getAttributes(channel, path, followLinks);
+            SftpATTRS attributes = getAttributes(channel, normalizePath(path), followLinks);
             return new SFTPPathFileAttributes(attributes);
         }
     }
@@ -835,11 +859,11 @@ class SFTPFileSystem extends FileSystem {
         FileAttributeSupport.setAttribute(attribute, value, view);
     }
 
-    private SftpATTRS getAttributes(Channel channel, SFTPPath path, boolean followLinks) throws IOException {
-        return channel.readAttributes(path.path(), followLinks);
+    private SftpATTRS getAttributes(Channel channel, String path, boolean followLinks) throws IOException {
+        return channel.readAttributes(path, followLinks);
     }
 
-    private SftpATTRS findAttributes(Channel channel, SFTPPath path, boolean followLinks) throws IOException {
+    private SftpATTRS findAttributes(Channel channel, String path, boolean followLinks) throws IOException {
         try {
             return getAttributes(channel, path, followLinks);
         } catch (@SuppressWarnings("unused") NoSuchFileException e) {
@@ -849,7 +873,7 @@ class SFTPFileSystem extends FileSystem {
 
     long getTotalSpace(SFTPPath path) throws IOException {
         try (Channel channel = channelPool.get()) {
-            SftpStatVFS stat = channel.statVFS(path.path());
+            SftpStatVFS stat = channel.statVFS(normalizePath(path));
             // don't use stat.getSize because that uses kilobyte precision
             return stat.getFragmentSize() * stat.getBlocks();
         } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
@@ -860,7 +884,7 @@ class SFTPFileSystem extends FileSystem {
 
     long getUsableSpace(SFTPPath path) throws IOException {
         try (Channel channel = channelPool.get()) {
-            SftpStatVFS stat = channel.statVFS(path.path());
+            SftpStatVFS stat = channel.statVFS(normalizePath(path));
             // don't use stat.getAvailForNonRoot because that uses kilobyte precision
             return stat.getFragmentSize() * stat.getAvailBlocks();
         } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
@@ -871,7 +895,7 @@ class SFTPFileSystem extends FileSystem {
 
     long getUnallocatedSpace(SFTPPath path) throws IOException {
         try (Channel channel = channelPool.get()) {
-            SftpStatVFS stat = channel.statVFS(path.path());
+            SftpStatVFS stat = channel.statVFS(normalizePath(path));
             // don't use stat.getAvail because that uses kilobyte precision
             return stat.getFragmentSize() * stat.getFreeBlocks();
         } catch (@SuppressWarnings("unused") UnsupportedOperationException e) {
@@ -883,7 +907,7 @@ class SFTPFileSystem extends FileSystem {
     long getBlockSize(SFTPPath path) throws IOException {
         try (Channel channel = channelPool.get()) {
             // Propagate any UnsupportedOperationException, as that's allowed to be thrown
-            SftpStatVFS stat = channel.statVFS(path.path());
+            SftpStatVFS stat = channel.statVFS(normalizePath(path));
             return stat.getBlockSize();
         }
     }
