@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -61,7 +62,7 @@ import com.github.robtimus.filesystems.URISupport;
 class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
     @Nested
-    class PathAndFiles {
+    class PathsAndFiles {
 
         @Test
         void testSuccess() throws IOException {
@@ -101,7 +102,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
         @Test
         void testFileSystemNotFound() {
-            URI uri = URI.create("sftp://sftp.github.com/");
+            URI uri = getURI();
             FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> Paths.get(uri));
             assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
             assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
@@ -113,7 +114,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
         @Test
         void testWithMinimalEnv() throws IOException {
-            URI uri = URI.create(getBaseUrlWithCredentials() + "/" + getDefaultDir());
+            URI uri = URI.create(getBaseUrlWithCredentials() + getDefaultDir());
             try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalEnv())) {
                 Path path = fs.getPath("");
                 assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
@@ -122,7 +123,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
 
         @Test
         void testWithMinimalIdentityEnv() throws IOException {
-            URI uri = URI.create(getBaseUrl() + "/" + getDefaultDir());
+            URI uri = URI.create(getBaseUrl() + getDefaultDir());
             try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalIdentityEnv())) {
                 Path path = fs.getPath("");
                 assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
@@ -134,7 +135,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             URI uri = URI.create(getBaseUrl());
             SFTPEnvironment env = createEnv();
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-            assertEquals(Messages.uri().hasUserInfo(uri).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.uri().hasUserInfo(uri), exception);
         }
 
         @Test
@@ -142,7 +143,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             URI uri = getURI().resolve("/path");
             SFTPEnvironment env = createEnv();
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-            assertEquals(Messages.uri().hasPath(uri).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.uri().hasPath(uri), exception);
         }
 
         @Test
@@ -150,7 +151,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             URI uri = getURI().resolve("?q=v");
             SFTPEnvironment env = createEnv();
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-            assertEquals(Messages.uri().hasQuery(uri).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.uri().hasQuery(uri), exception);
         }
 
         @Test
@@ -158,7 +159,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             URI uri = getURI().resolve("#id");
             SFTPEnvironment env = createEnv();
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-            assertEquals(Messages.uri().hasFragment(uri).getMessage(), exception.getMessage());
+            assertChainEquals(Messages.uri().hasFragment(uri), exception);
         }
     }
 
@@ -187,6 +188,13 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
                 existingFileSystem = FileSystems.getFileSystem(URI.create(getBaseUrl() + "/"));
                 assertSame(fs, existingFileSystem);
             }
+        }
+
+        @Test
+        void testWithNonEmptyPath() {
+            URI uri = URI.create(getBaseUrl() + "/foo");
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.getFileSystem(uri));
+            assertChainEquals(Messages.uri().hasPath(uri), exception);
         }
 
         @Test
@@ -275,7 +283,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     class NormalizeWithUsername {
 
         @Test
-        void testMinimalURIWithout() {
+        void testMinimalURIWithoutUserInfo() {
             URI uri = getURI();
             assertSame(uri, SFTPFileSystemProvider.normalizeWithUsername(uri, null));
         }
@@ -355,11 +363,60 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
-        void testFileSystemNotFound() {
+        void testFileSystemCreatedWithPath() {
             SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
-            URI uri = URI.create("sftp://sftp.github.com/");
+            URI uri = URI.create(getBaseUrlWithCredentials() + "/foo");
+            SFTPEnvironment.setDefault(createMinimalEnv());
+            try {
+                Path path = assertDoesNotThrow(() -> provider.getPath(uri));
+                assertNotEquals(uri, path.toUri());
+                assertEquals("/foo", path.toAbsolutePath().toString());
+                assertFalse(Files.exists(path));
+                assertDoesNotThrow(() -> path.getFileSystem().close());
+            } finally {
+                SFTPEnvironment.setDefault(null);
+            }
+        }
+
+        @Test
+        void testFileSystemCreatedWithoutPath() {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create(getBaseUrlWithCredentials());
+            SFTPEnvironment.setDefault(createMinimalEnv()
+                    .withDefaultDirectory(getDefaultDir()));
+            try {
+                Path path = assertDoesNotThrow(() -> provider.getPath(uri));
+                assertNotEquals(uri, path.toUri());
+                assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+                assertTrue(Files.exists(path));
+                assertDoesNotThrow(() -> path.getFileSystem().close());
+            } finally {
+                SFTPEnvironment.setDefault(null);
+            }
+        }
+
+        @Test
+        void testFileSystemCreatedWithIdentity() {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create(getBaseUrl() + "/foo");
+            SFTPEnvironment.setDefault(createMinimalIdentityEnv());
+            try {
+                Path path = assertDoesNotThrow(() -> provider.getPath(uri));
+                assertEquals(uri, path.toUri());
+                assertEquals("/foo", path.toAbsolutePath().toString());
+                assertFalse(Files.exists(path));
+                assertDoesNotThrow(() -> path.getFileSystem().close());
+            } finally {
+                SFTPEnvironment.setDefault(null);
+            }
+        }
+
+        @Test
+        void testFileSystemCreationFailure() {
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create(getBaseUrlWithCredentials());
+            // Cause: unknown host key
             FileSystemNotFoundException exception = assertThrows(FileSystemNotFoundException.class, () -> provider.getPath(uri));
-            assertEquals(normalizeWithUsername(uri, null).toString(), exception.getMessage());
             assertEquals(normalizeWithoutPassword(uri).toString(), exception.getMessage());
         }
     }

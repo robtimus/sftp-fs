@@ -1730,7 +1730,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         @ParameterizedTest
         @ValueSource(strings = CURRENT_DIR)
         @EmptySource
-        void testCopyToCurrentDir(String dir) throws IOException {
+        void testMoveToCurrentDir(String dir) throws IOException {
             addDirectory("/baz");
             addFile("/baz/qux");
 
@@ -2058,7 +2058,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
-        void testDirectoryFollowLinksForDirectory() throws IOException {
+        void testDirectoryFollowLinks() throws IOException {
             addDirectory("/foo");
 
             PosixFileAttributes attributes = provider().readAttributes(createPath("/foo"), PosixFileAttributes.class);
@@ -2075,23 +2075,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
-        void testDirectoryFollowLinksForFile() throws IOException {
-            Path foo = addFile("/foo");
-
-            PosixFileAttributes attributes = provider().readAttributes(createPath("/foo"), PosixFileAttributes.class);
-
-            assertEquals(Files.size(foo), attributes.size());
-            assertNotNull(attributes.owner().getName());
-            assertNotNull(attributes.group().getName());
-            assertNotNull(attributes.permissions());
-            assertFalse(attributes.isDirectory());
-            assertTrue(attributes.isRegularFile());
-            assertFalse(attributes.isSymbolicLink());
-            assertFalse(attributes.isOther());
-        }
-
-        @Test
-        void testDirectoryNoFollowLinksForDirectory() throws IOException {
+        void testDirectoryNoFollowLinks() throws IOException {
             addDirectory("/foo");
 
             PosixFileAttributes attributes = provider().readAttributes(createPath("/foo"), PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
@@ -2103,22 +2087,6 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertNotNull(attributes.permissions());
             assertTrue(attributes.isDirectory());
             assertFalse(attributes.isRegularFile());
-            assertFalse(attributes.isSymbolicLink());
-            assertFalse(attributes.isOther());
-        }
-
-        @Test
-        void testDirectoryNoFollowLinksForFile() throws IOException {
-            Path foo = addFile("/foo");
-
-            PosixFileAttributes attributes = provider().readAttributes(createPath("/foo"), PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-
-            assertEquals(Files.size(foo), attributes.size());
-            assertNotNull(attributes.owner().getName());
-            assertNotNull(attributes.group().getName());
-            assertNotNull(attributes.permissions());
-            assertFalse(attributes.isDirectory());
-            assertTrue(attributes.isRegularFile());
             assertFalse(attributes.isSymbolicLink());
             assertFalse(attributes.isOther());
         }

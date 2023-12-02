@@ -205,8 +205,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     URI toUri(SFTPPath path) {
-        SFTPPath absPath = toAbsolutePath(path).normalize();
-        return toUri(absPath.path());
+        return toUri(toAbsolutePath(path).normalizedPath());
     }
 
     URI toUri(String path) {
@@ -247,7 +246,7 @@ class SFTPFileSystem extends FileSystem {
     }
 
     private String normalizePath(SFTPPath path) {
-        return path.toAbsolutePath().normalize().path();
+        return path.toAbsolutePath().normalizedPath();
     }
 
     String toString(SFTPPath path) {
@@ -543,7 +542,7 @@ class SFTPFileSystem extends FileSystem {
                 getAttributes(channel, normalizedSource, false);
             }
 
-            if (toAbsolutePath(source).parentPath() == null) {
+            if (ROOT_PATH.equals(normalizedSource)) {
                 // cannot move or rename the root
                 throw new DirectoryNotEmptyException(source.path());
             }

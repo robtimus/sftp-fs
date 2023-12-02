@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BinaryOperator;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
@@ -57,6 +58,8 @@ import com.jcraft.jsch.UserInfo;
  * @author Rob Spoor
  */
 public class SFTPEnvironment implements Map<String, Object> {
+
+    private static final AtomicReference<SFTPEnvironment> DEFAULTS = new AtomicReference<>();
 
     // session support
 
@@ -916,7 +919,25 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @since 3.0
      */
     public static SFTPEnvironment copy(Map<String, ?> env) {
-        return new SFTPEnvironment(new HashMap<>(env));
+        return env == null
+                ? new SFTPEnvironment()
+                : new SFTPEnvironment(new HashMap<>(env));
+    }
+
+    /**
+     * Sets the default SFTP environment.
+     * This is used in {@link SFTPFileSystemProvider#getPath(URI)} when a file system needs to be created, since no environment can be passed.
+     * This way, certain settings like {@link #withPoolConfig(SFTPPoolConfig) pool configuration} can still be applied.
+     *
+     * @param defaultEnvironment The default SFTP environment. Use {@code null} to reset it to an empty environment.
+     * @since 3.3
+     */
+    public static void setDefault(SFTPEnvironment defaultEnvironment) {
+        DEFAULTS.set(copy(defaultEnvironment));
+    }
+
+    static SFTPEnvironment copyOfDefault() {
+        return copy(DEFAULTS.get());
     }
 
     static final class AppendedConfig {

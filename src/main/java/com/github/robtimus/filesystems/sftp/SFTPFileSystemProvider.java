@@ -88,9 +88,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      */
     @Override
     public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
-        SFTPEnvironment environment = env == null
-                ? new SFTPEnvironment()
-                : SFTPEnvironment.copy(env);
+        SFTPEnvironment environment = SFTPEnvironment.copy(env);
 
         boolean allowUserInfo = !environment.hasUsername();
         boolean allowPath = !environment.hasDefaultDir();
@@ -137,29 +135,45 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     public FileSystem getFileSystem(URI uri) {
         checkURI(uri, true, false);
 
-        return getExistingFileSystem(uri);
+        URI normalizedURI = normalizeWithoutPassword(uri);
+        return fileSystems.get(normalizedURI);
     }
 
     /**
      * Return a {@code Path} object by converting the given {@link URI}. The resulting {@code Path} is associated with a {@link FileSystem} that
-     * already exists. This method does not support constructing {@code FileSystem}s automatically.
+     * already exists or is constructed automatically.
      * <p>
      * The URI must have a {@link URI#getScheme() scheme} equal to {@link #getScheme()}, and no {@link URI#getQuery() query} or
      * {@link URI#getFragment() fragment}. Because the original credentials were possibly provided through an environment map,
-     * the URI can contain {@link URI#getUserInfo() user information}, although this should not contain a password for security reasons.
+     * the URI can contain {@link URI#getUserInfo() user information}, although for security reasons this should only contain a password to support
+     * automatically creating file systems.
+     * <p>
+     * If no matching file system existed yet, a new one is created. The {@link SFTPEnvironment#setDefault(SFTPEnvironment) default environment} is
+     * used for this, to allow configuring the resulting file system.
+     * <p>
+     * Remember to close any newly created file system.
      */
     @Override
     @SuppressWarnings("resource")
     public Path getPath(URI uri) {
         checkURI(uri, true, true);
 
-        SFTPFileSystem fs = getExistingFileSystem(uri);
-        return fs.getPath(uri.getPath());
-    }
-
-    private SFTPFileSystem getExistingFileSystem(URI uri) {
         URI normalizedURI = normalizeWithoutPassword(uri);
-        return fileSystems.get(normalizedURI);
+        SFTPEnvironment env = SFTPEnvironment.copyOfDefault();
+
+        addUserInfoIfNeeded(env, uri.getUserInfo());
+        // Do not add any default dir
+
+        try {
+            SFTPFileSystem fs = fileSystems.addIfNotExists(normalizedURI, env);
+            return fs.getPath(uri.getPath());
+        } catch (IOException e) {
+            // FileSystemProvider.getPath mandates that a FileSystemNotFoundException should be thrown if no file system could be created
+            // automatically
+            FileSystemNotFoundException exception = new FileSystemNotFoundException(normalizedURI.toString());
+            exception.initCause(e);
+            throw exception;
+        }
     }
 
     private void checkURI(URI uri, boolean allowUserInfo, boolean allowPath) {
