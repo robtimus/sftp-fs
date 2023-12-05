@@ -116,7 +116,9 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
     }
 
     private void addDefaultDirIfNeeded(SFTPEnvironment environment, String path) {
-        if (path != null && !path.isEmpty()) {
+        // It's possible for the path to be set and the environment to have a default dir - if the path is /
+        // If that's the case, don't overwrite the environment value
+        if (path != null && !path.isEmpty() && !environment.hasDefaultDir()) {
             environment.withDefaultDirectory(path);
         }
     }

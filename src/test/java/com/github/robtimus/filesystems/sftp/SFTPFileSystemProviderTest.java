@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystemException;
 import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -57,6 +58,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
+import com.jcraft.jsch.JSchException;
 
 @SuppressWarnings("nls")
 class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
@@ -112,38 +114,122 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
     @Nested
     class NewFileSystem {
 
-        @Test
-        void testWithMinimalEnv() throws IOException {
-            URI uri = URI.create(getBaseUrlWithCredentials() + getDefaultDir());
-            try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalEnv())) {
-                Path path = fs.getPath("");
-                assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+        @Nested
+        class WithCredentials {
+
+            @Test
+            void testWithCredentialsFromURI() throws IOException {
+                URI uri = URI.create(getBaseUrlWithCredentials() + getDefaultDir());
+                try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalEnv())) {
+                    Path path = fs.getPath("");
+                    assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testWithCredentialsFromURIWithIdentityFromEnv() throws IOException {
+                URI uri = URI.create(getBaseUrl() + getDefaultDir());
+                try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalIdentityEnv())) {
+                    Path path = fs.getPath("");
+                    assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testWithCredentialsFromEnv() throws IOException {
+                URI uri = getURI();
+                try (FileSystem fs = FileSystems.newFileSystem(uri, createEnv())) {
+                    Path path = fs.getPath("");
+                    assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testWithCredentialsFromURIAndEnv() {
+                URI uri = URI.create(getBaseUrl());
+                SFTPEnvironment env = createEnv();
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+                assertChainEquals(Messages.uri().hasUserInfo(uri), exception);
+            }
+
+            @Test
+            void testWithoutCredentials() {
+                URI uri = getURI();
+                SFTPEnvironment env = createMinimalEnv();
+                FileSystemException exception = assertThrows(FileSystemException.class, () -> FileSystems.newFileSystem(uri, env));
+                assertInstanceOf(JSchException.class, exception.getCause());
             }
         }
 
-        @Test
-        void testWithMinimalIdentityEnv() throws IOException {
-            URI uri = URI.create(getBaseUrl() + getDefaultDir());
-            try (FileSystem fs = FileSystems.newFileSystem(uri, createMinimalIdentityEnv())) {
-                Path path = fs.getPath("");
-                assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
+        @Nested
+        class WithPath {
+
+            @Test
+            void testNoPathFromURIOrEnv() throws IOException {
+                URI uri = getURI();
+                SFTPEnvironment env = createMinimalIdentityEnv().withUsername(getUsername());
+                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                    Path path = fs.getPath("");
+                    assertEquals("/", path.toAbsolutePath().toString());
+                }
             }
-        }
 
-        @Test
-        void testWithUserInfoAndCredentials() {
-            URI uri = URI.create(getBaseUrl());
-            SFTPEnvironment env = createEnv();
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-            assertChainEquals(Messages.uri().hasUserInfo(uri), exception);
-        }
+            @Test
+            void testPathFromEnv() throws IOException {
+                String defaultDir = getDefaultDir() + "/foo";
+                addDirectoryIfNotExists(defaultDir);
 
-        @Test
-        void testWithPathAndDefaultDir() {
-            URI uri = getURI().resolve("/path");
-            SFTPEnvironment env = createEnv();
-            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
-            assertChainEquals(Messages.uri().hasPath(uri), exception);
+                URI uri = getURI();
+                SFTPEnvironment env = createEnv().withDefaultDirectory(defaultDir);
+                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                    Path path = fs.getPath("");
+                    assertEquals(defaultDir, path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testRootPathFromURINoPathFromEnv() throws IOException {
+                URI uri = getURI().resolve("/");
+                SFTPEnvironment env = createMinimalIdentityEnv().withUsername(getUsername());
+                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                    Path path = fs.getPath("");
+                    assertEquals("/", path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testRootPathFromURIAndPathFromEnv() throws IOException {
+                String defaultDir = getDefaultDir() + "/foo";
+                addDirectoryIfNotExists(defaultDir);
+
+                URI uri = getURI().resolve("/");
+                SFTPEnvironment env = createEnv().withDefaultDirectory(defaultDir);
+                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                    Path path = fs.getPath("");
+                    assertEquals(defaultDir, path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testPathFromURI() throws IOException {
+                String defaultDir = getDefaultDir() + "/foo";
+                addDirectoryIfNotExists(defaultDir);
+
+                URI uri = getURI().resolve(defaultDir);
+                SFTPEnvironment env = createMinimalIdentityEnv().withUsername(getUsername());
+                try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+                    Path path = fs.getPath("");
+                    assertEquals(defaultDir, path.toAbsolutePath().toString());
+                }
+            }
+
+            @Test
+            void testPathFromURIAndEnv() {
+                URI uri = getURI().resolve("/path");
+                SFTPEnvironment env = createEnv();
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> FileSystems.newFileSystem(uri, env));
+                assertChainEquals(Messages.uri().hasPath(uri), exception);
+            }
         }
 
         @Test
