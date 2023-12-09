@@ -20,6 +20,7 @@ package com.github.robtimus.filesystems.sftp;
 import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -36,11 +37,13 @@ import java.lang.reflect.Method;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.Vector;
@@ -217,6 +220,60 @@ class SFTPEnvironmentTest {
         env.withIdentities(identity1, identity2);
 
         assertEquals(Collections.singletonMap("identities", Arrays.asList(identity1, identity2)), env);
+    }
+
+    @Test
+    void testWithQueryString() {
+        SFTPEnvironment env = new SFTPEnvironment();
+
+        assertEquals(Collections.emptyMap(), env);
+
+        String queryString = "connectTimeout=5"
+                + "&unknown1"
+                + "&config.key1=value+with+spaces"
+                + "&config.key2=value+with+%25,+%26,+%3D+and+spaces"
+                + "&appendedConfig.key1=additional+value1"
+                + "&appendedConfig.key2=additional+value2"
+                + "&timeout=10"
+                + "&clientVersion=1.0"
+                + "&hostKeyAlias=hka"
+                + "&serverAliveInterval=15"
+                + "&serverAliveCountMax=20"
+                + "&agentForwarding=true"
+                + "&filenameEncoding=ASCII"
+                + "&defaultDir=/home"
+                + "&poolConfig.maxWaitTime=PT5S"
+                + "&poolConfig.maxIdleTime=PT10S"
+                + "&poolConfig.initialSize=2"
+                + "&poolConfig.maxSize=10"
+                + "&unknown2";
+
+        env.withQueryString(queryString);
+
+        SFTPEnvironment expected = new SFTPEnvironment()
+                .withConnectTimeout(5)
+                .withConfig("key1", "value with spaces")
+                .withConfig("key2", "value with %, &, = and spaces")
+                .withAppendedConfig("key1", "additional value1")
+                .withAppendedConfig("key2", "additional value2")
+                .withTimeout(10)
+                .withClientVersion("1.0")
+                .withHostKeyAlias("hka")
+                .withServerAliveInterval(15)
+                .withServerAliveCountMax(20)
+                .withAgentForwarding(true)
+                .withFilenameEncoding(StandardCharsets.US_ASCII)
+                .withDefaultDirectory("/home");
+
+        // SFTPPoolConfig doesn't define equals, so it needs to be removed before env can be compared to expected
+        SFTPPoolConfig poolConfig = assertInstanceOf(SFTPPoolConfig.class, env.remove("poolConfig"));
+
+        assertEquals(Optional.of(Duration.ofSeconds(5)), poolConfig.maxWaitTime());
+        assertEquals(Optional.of(Duration.ofSeconds(10)), poolConfig.maxIdleTime());
+        assertEquals(2, poolConfig.initialSize());
+        assertEquals(10, poolConfig.maxSize());
+
+        assertEquals(expected, env);
     }
 
     @Nested
@@ -454,7 +511,7 @@ class SFTPEnvironmentTest {
     class InitializeChannelPreConnect {
 
         @Test
-        void testEmpty() throws IOException {
+        void testEmpty() {
             SFTPEnvironment env = new SFTPEnvironment();
 
             ChannelSftp channel = mock(ChannelSftp.class);
@@ -465,7 +522,7 @@ class SFTPEnvironmentTest {
         }
 
         @Test
-        void testFull() throws IOException {
+        void testFull() {
             SFTPEnvironment env = new SFTPEnvironment();
             initializeFully(env);
 
@@ -479,7 +536,7 @@ class SFTPEnvironmentTest {
         }
 
         @Test
-        void testWithNulls() throws IOException {
+        void testWithNulls() {
             SFTPEnvironment env = new SFTPEnvironment();
             initializeWithNulls(env);
 

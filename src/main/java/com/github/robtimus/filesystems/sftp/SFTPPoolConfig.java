@@ -94,6 +94,19 @@ public final class SFTPPoolConfig {
                 + "]";
     }
 
+    Builder toBuilder() {
+        Builder builder = custom()
+                .withInitialSize(initialSize())
+                .withMaxSize(maxSize());
+        builder = maxWaitTime()
+                .map(builder::withMaxWaitTime)
+                .orElse(builder);
+        builder = maxIdleTime()
+                .map(builder::withMaxIdleTime)
+                .orElse(builder);
+        return builder;
+    }
+
     /**
      * Returns a default {@link SFTPPoolConfig} object. This has the same configuration as an object returned by {@code custom().build()}.
      *

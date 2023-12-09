@@ -51,6 +51,8 @@ import com.github.robtimus.filesystems.FileSystemMap;
 import com.github.robtimus.filesystems.LinkOptionSupport;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.URISupport;
+import com.github.robtimus.filesystems.sftp.SFTPEnvironment.QueryParam;
+import com.github.robtimus.filesystems.sftp.SFTPEnvironment.QueryParams;
 
 /**
  * A provider for SFTP file systems.
@@ -93,7 +95,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         boolean allowUserInfo = !environment.hasUsername();
         boolean allowPath = !environment.hasDefaultDir();
 
-        checkURI(uri, allowUserInfo, allowPath);
+        checkURI(uri, allowUserInfo, allowPath, false);
 
         addUserInfoIfNeeded(environment, uri.getUserInfo());
         addDefaultDirIfNeeded(environment, uri.getPath());
@@ -135,7 +137,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      */
     @Override
     public FileSystem getFileSystem(URI uri) {
-        checkURI(uri, true, false);
+        checkURI(uri, true, false, false);
 
         URI normalizedURI = normalizeWithoutPassword(uri);
         return fileSystems.get(normalizedURI);
@@ -145,26 +147,31 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
      * Return a {@code Path} object by converting the given {@link URI}. The resulting {@code Path} is associated with a {@link FileSystem} that
      * already exists or is constructed automatically.
      * <p>
-     * The URI must have a {@link URI#getScheme() scheme} equal to {@link #getScheme()}, and no {@link URI#getQuery() query} or
-     * {@link URI#getFragment() fragment}. Because the original credentials were possibly provided through an environment map,
-     * the URI can contain {@link URI#getUserInfo() user information}, although for security reasons this should only contain a password to support
-     * automatically creating file systems.
+     * The URI must have a {@link URI#getScheme() scheme} equal to {@link #getScheme()}, and no {@link URI#getFragment() fragment}. Because the
+     * original credentials were possibly provided through an environment map, the URI can contain {@link URI#getUserInfo() user information},
+     * although for security reasons this should only contain a password to support automatically creating file systems.
      * <p>
      * If no matching file system existed yet, a new one is created. The {@link SFTPEnvironment#setDefault(SFTPEnvironment) default environment} is
-     * used for this, to allow configuring the resulting file system.
+     * used for this, to allow configuring the resulting file system. URI specific settings can also be provided through the
+     * {@link URI#getQuery() query}; see usages of {@link QueryParam} and {@link QueryParams} for the possible query parameters.
      * <p>
      * Remember to close any newly created file system.
      */
     @Override
     @SuppressWarnings("resource")
     public Path getPath(URI uri) {
-        checkURI(uri, true, true);
+        checkURI(uri, true, true, true);
 
         URI normalizedURI = normalizeWithoutPassword(uri);
         SFTPEnvironment env = SFTPEnvironment.copyOfDefault();
 
         addUserInfoIfNeeded(env, uri.getUserInfo());
-        // Do not add any default dir
+        // Do not add any default dir from the path
+
+        String rawQueryString = uri.getRawQuery();
+        if (rawQueryString != null) {
+            env.withQueryString(rawQueryString);
+        }
 
         try {
             SFTPFileSystem fs = fileSystems.addIfNotExists(normalizedURI, env);
@@ -178,7 +185,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private void checkURI(URI uri, boolean allowUserInfo, boolean allowPath) {
+    private void checkURI(URI uri, boolean allowUserInfo, boolean allowPath, boolean allowQuery) {
         if (!uri.isAbsolute()) {
             throw Messages.uri().notAbsolute(uri);
         }
@@ -194,7 +201,7 @@ public class SFTPFileSystemProvider extends FileSystemProvider {
         if (!allowPath && !hasEmptyPath(uri) && !"/".equals(uri.getPath())) { //$NON-NLS-1$
             throw Messages.uri().hasPath(uri);
         }
-        if (uri.getQuery() != null && !uri.getQuery().isEmpty()) {
+        if (!allowQuery && uri.getQuery() != null && !uri.getQuery().isEmpty()) {
             throw Messages.uri().hasQuery(uri);
         }
         if (uri.getFragment() != null && !uri.getFragment().isEmpty()) {

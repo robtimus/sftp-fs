@@ -19,10 +19,17 @@ package com.github.robtimus.filesystems.sftp;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
-import java.nio.charset.UnsupportedCharsetException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -88,6 +95,7 @@ public class SFTPEnvironment implements Map<String, Object> {
     private static final String SOCKET_FACTORY = "socketFactory"; //$NON-NLS-1$
     // timeOut should have been timeout, but that's a breaking change...
     private static final String TIMEOUT = "timeOut"; //$NON-NLS-1$
+    private static final String TIMEOUT_QUERY_PARAM = "timeout"; //$NON-NLS-1$
     private static final String CLIENT_VERSION = "clientVersion"; //$NON-NLS-1$
     private static final String HOST_KEY_ALIAS = "hostKeyAlias"; //$NON-NLS-1$
     private static final String SERVER_ALIVE_INTERVAL = "serverAliveInterval"; //$NON-NLS-1$
@@ -107,6 +115,10 @@ public class SFTPEnvironment implements Map<String, Object> {
 
     private static final String DEFAULT_DIR = "defaultDir"; //$NON-NLS-1$
     private static final String POOL_CONFIG = "poolConfig"; //$NON-NLS-1$
+    private static final String POOL_CONFIG_MAX_WAIT_TIME = POOL_CONFIG + ".maxWaitTime"; //$NON-NLS-1$
+    private static final String POOL_CONFIG_MAX_IDLE_TIME = POOL_CONFIG + ".maxIdleTime"; //$NON-NLS-1$
+    private static final String POOL_CONFIG_INITIAL_SIZE = POOL_CONFIG + ".initialSize"; //$NON-NLS-1$
+    private static final String POOL_CONFIG_MAX_SIZE = POOL_CONFIG + ".maxSize"; //$NON-NLS-1$
     private static final String FILE_SYSTEM_EXCEPTION_FACTORY = "fileSystemExceptionFactory"; //$NON-NLS-1$
 
     private final Map<String, Object> map;
@@ -148,6 +160,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param timeout The connection timeout in milliseconds.
      * @return This object.
      */
+    @QueryParam(CONNECT_TIMEOUT)
     public SFTPEnvironment withConnectTimeout(int timeout) {
         put(CONNECT_TIMEOUT, timeout);
         return this;
@@ -211,6 +224,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @throws NullPointerException if the given key or value is {@code null}.
      * @see #withConfig(Properties)
      */
+    @QueryParam(CONFIG + ".<key>")
     public SFTPEnvironment withConfig(String key, String value) {
         getConfig().setProperty(key, value);
         return this;
@@ -250,6 +264,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @throws NullPointerException If the given key or value is {@code null}.
      * @since 3.2
      */
+    @QueryParam(APPENDED_CONFIG + ".<key>")
     public SFTPEnvironment withAppendedConfig(String key, String value) {
         return withAppendedConfig(key, value, AppendedConfig.DEFAULT_APPENDER);
     }
@@ -302,6 +317,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @return This object.
      * @see Socket#setSoTimeout(int)
      */
+    @QueryParam(TIMEOUT_QUERY_PARAM)
     public SFTPEnvironment withTimeout(int timeout) {
         put(TIMEOUT, timeout);
         return this;
@@ -313,6 +329,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param version The client version.
      * @return This object.
      */
+    @QueryParam(CLIENT_VERSION)
     public SFTPEnvironment withClientVersion(String version) {
         put(CLIENT_VERSION, version);
         return this;
@@ -324,6 +341,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param alias The host key alias.
      * @return This object.
      */
+    @QueryParam(HOST_KEY_ALIAS)
     public SFTPEnvironment withHostKeyAlias(String alias) {
         put(HOST_KEY_ALIAS, alias);
         return this;
@@ -335,6 +353,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param interval The server alive interval in milliseconds.
      * @return This object.
      */
+    @QueryParam(SERVER_ALIVE_INTERVAL)
     public SFTPEnvironment withServerAliveInterval(int interval) {
         put(SERVER_ALIVE_INTERVAL, interval);
         return this;
@@ -346,6 +365,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param count The maximum number of server alive messages.
      * @return This object.
      */
+    @QueryParam(SERVER_ALIVE_COUNT_MAX)
     public SFTPEnvironment withServerAliveCountMax(int count) {
         put(SERVER_ALIVE_COUNT_MAX, count);
         return this;
@@ -471,6 +491,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param agentForwarding {@code true} to enable strict agent forwarding, or {@code false} to disable it.
      * @return This object.
      */
+    @QueryParam(AGENT_FORWARDING)
     public SFTPEnvironment withAgentForwarding(boolean agentForwarding) {
         put(AGENT_FORWARDING, agentForwarding);
         return this;
@@ -482,6 +503,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param encoding The filename encoding to use.
      * @return This object.
      */
+    @QueryParam(FILENAME_ENCODING)
     public SFTPEnvironment withFilenameEncoding(Charset encoding) {
         put(FILENAME_ENCODING, encoding);
         return this;
@@ -496,6 +518,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @param pathname The default directory to use.
      * @return This object.
      */
+    @QueryParam(DEFAULT_DIR)
     public SFTPEnvironment withDefaultDirectory(String pathname) {
         put(DEFAULT_DIR, pathname);
         return this;
@@ -513,6 +536,10 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @return This object.
      * @since 3.0
      */
+    @QueryParam(POOL_CONFIG_MAX_WAIT_TIME)
+    @QueryParam(POOL_CONFIG_MAX_IDLE_TIME)
+    @QueryParam(POOL_CONFIG_INITIAL_SIZE)
+    @QueryParam(POOL_CONFIG_MAX_SIZE)
     public SFTPEnvironment withPoolConfig(SFTPPoolConfig poolConfig) {
         put(POOL_CONFIG, poolConfig);
         return this;
@@ -526,6 +553,11 @@ public class SFTPEnvironment implements Map<String, Object> {
      */
     public SFTPEnvironment withFileSystemExceptionFactory(FileSystemExceptionFactory factory) {
         put(FILE_SYSTEM_EXCEPTION_FACTORY, factory);
+        return this;
+    }
+
+    SFTPEnvironment withQueryString(String rawQueryString) {
+        new QueryParamProcessor(this).processQueryString(rawQueryString);
         return this;
     }
 
@@ -770,7 +802,7 @@ public class SFTPEnvironment implements Map<String, Object> {
         }
     }
 
-    void initializePreConnect(ChannelSftp channel) throws IOException {
+    void initializePreConnect(ChannelSftp channel) {
         configureAgentForwarding(channel);
         configureFilenameEncoding(channel);
     }
@@ -782,14 +814,10 @@ public class SFTPEnvironment implements Map<String, Object> {
         }
     }
 
-    private void configureFilenameEncoding(ChannelSftp channel) throws FileSystemException {
+    private void configureFilenameEncoding(ChannelSftp channel) {
         if (containsKey(FILENAME_ENCODING)) {
             Charset filenameEncoding = FileSystemProviderSupport.getValue(this, FILENAME_ENCODING, Charset.class, null);
-            try {
-                channel.setFilenameEncoding(filenameEncoding);
-            } catch (UnsupportedCharsetException e) {
-                throw asFileSystemException(e);
-            }
+            channel.setFilenameEncoding(filenameEncoding);
         }
     }
 
@@ -982,6 +1010,145 @@ public class SFTPEnvironment implements Map<String, Object> {
         @Override
         public String toString() {
             return value;
+        }
+    }
+
+    /**
+     * Indicates which query parameters can be used to define environment values.
+     *
+     * @author Rob Spoor
+     * @since 3.3
+     */
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.SOURCE)
+    @Documented
+    @Repeatable(QueryParams.class)
+    public @interface QueryParam {
+
+        /**
+         * The name of the query parameter.
+         */
+        String value();
+    }
+
+    /**
+     * A container for {@link QueryParam} annotations.
+     *
+     * @author Rob Spoor
+     * @since 3.3
+     */
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.SOURCE)
+    @Documented
+    public @interface QueryParams {
+
+        /**
+         * The contained {@link QueryParam} annotations.
+         */
+        QueryParam[] value();
+    }
+
+    static final class QueryParamProcessor {
+
+        private final SFTPEnvironment env;
+        private SFTPPoolConfig.Builder poolConfigBuilder;
+
+        private QueryParamProcessor(SFTPEnvironment env) {
+            this.env = env;
+        }
+
+        private void processQueryString(String rawQueryString) {
+            int start = 0;
+            int indexOfAmp = rawQueryString.indexOf('&', start);
+            while (indexOfAmp != -1) {
+                processQueryParam(rawQueryString, start, indexOfAmp);
+                start = indexOfAmp + 1;
+                indexOfAmp = rawQueryString.indexOf('&', start);
+            }
+            processQueryParam(rawQueryString, start, rawQueryString.length());
+
+            if (poolConfigBuilder != null) {
+                env.withPoolConfig(poolConfigBuilder.build());
+            }
+        }
+
+        private void processQueryParam(String rawQueryString, int start, int end) {
+            int indexOfEquals = rawQueryString.indexOf('=', start);
+            if (indexOfEquals == -1 || indexOfEquals > end) {
+                String name = decode(rawQueryString.substring(start, end));
+                processQueryParam(name, ""); //$NON-NLS-1$
+            } else {
+                String name = decode(rawQueryString.substring(start, indexOfEquals));
+                String value = decode(rawQueryString.substring(indexOfEquals + 1, end));
+                processQueryParam(name, value);
+            }
+        }
+
+        private void processQueryParam(String name, String value) {
+            switch (name) {
+                case CONNECT_TIMEOUT:
+                    env.withConnectTimeout(Integer.parseInt(value));
+                    break;
+                case TIMEOUT_QUERY_PARAM:
+                    env.withTimeout(Integer.parseInt(value));
+                    break;
+                case CLIENT_VERSION:
+                    env.withClientVersion(value);
+                    break;
+                case HOST_KEY_ALIAS:
+                    env.withHostKeyAlias(value);
+                    break;
+                case SERVER_ALIVE_INTERVAL:
+                    env.withServerAliveInterval(Integer.parseInt(value));
+                    break;
+                case SERVER_ALIVE_COUNT_MAX:
+                    env.withServerAliveCountMax(Integer.parseInt(value));
+                    break;
+                case AGENT_FORWARDING:
+                    env.withAgentForwarding(Boolean.parseBoolean(value));
+                    break;
+                case FILENAME_ENCODING:
+                    env.withFilenameEncoding(Charset.forName(value));
+                    break;
+                case DEFAULT_DIR:
+                    env.withDefaultDirectory(value);
+                    break;
+                case POOL_CONFIG_MAX_WAIT_TIME:
+                    poolConfigBuilder().withMaxWaitTime(Duration.parse(value));
+                    break;
+                case POOL_CONFIG_MAX_IDLE_TIME:
+                    poolConfigBuilder().withMaxIdleTime(Duration.parse(value));
+                    break;
+                case POOL_CONFIG_INITIAL_SIZE:
+                    poolConfigBuilder().withInitialSize(Integer.parseInt(value));
+                    break;
+                case POOL_CONFIG_MAX_SIZE:
+                    poolConfigBuilder().withMaxSize(Integer.parseInt(value));
+                    break;
+                default:
+                    if (name.startsWith(CONFIG + ".")) { //$NON-NLS-1$
+                        env.withConfig(name.substring(CONFIG.length() + 1), value);
+                    } else if (name.startsWith(APPENDED_CONFIG + ".")) { //$NON-NLS-1$
+                        env.withAppendedConfig(name.substring(APPENDED_CONFIG.length() + 1), value);
+                    }
+                    // else ignore
+                    break;
+            }
+        }
+
+        private String decode(String value) {
+            try {
+                return URLDecoder.decode(value, "UTF-8"); //$NON-NLS-1$
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        private SFTPPoolConfig.Builder poolConfigBuilder() {
+            if (poolConfigBuilder == null) {
+                poolConfigBuilder = env.getPoolConfig().toBuilder();
+            }
+            return poolConfigBuilder;
         }
     }
 }

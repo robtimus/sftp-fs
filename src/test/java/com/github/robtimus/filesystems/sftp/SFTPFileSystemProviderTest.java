@@ -456,6 +456,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             try {
                 Path path = assertDoesNotThrow(() -> provider.getPath(uri));
                 assertNotEquals(uri, path.toUri());
+                assertEquals("/foo", path.toString());
                 assertEquals("/foo", path.toAbsolutePath().toString());
                 assertFalse(Files.exists(path));
                 assertDoesNotThrow(() -> path.getFileSystem().close());
@@ -473,6 +474,7 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             try {
                 Path path = assertDoesNotThrow(() -> provider.getPath(uri));
                 assertNotEquals(uri, path.toUri());
+                assertEquals("", path.toString());
                 assertEquals(getDefaultDir(), path.toAbsolutePath().toString());
                 assertTrue(Files.exists(path));
                 assertDoesNotThrow(() -> path.getFileSystem().close());
@@ -489,8 +491,28 @@ class SFTPFileSystemProviderTest extends AbstractSFTPFileSystemTest {
             try {
                 Path path = assertDoesNotThrow(() -> provider.getPath(uri));
                 assertEquals(uri, path.toUri());
+                assertEquals("/foo", path.toString());
                 assertEquals("/foo", path.toAbsolutePath().toString());
                 assertFalse(Files.exists(path));
+                assertDoesNotThrow(() -> path.getFileSystem().close());
+            } finally {
+                SFTPEnvironment.setDefault(null);
+            }
+        }
+
+        @Test
+        void testFileSystemCreatedWithQueryParams() throws IOException {
+            addDirectoryIfNotExists("/foo");
+
+            SFTPFileSystemProvider provider = new SFTPFileSystemProvider();
+            URI uri = URI.create(getBaseUrlWithCredentials() + "?defaultDir=/foo");
+            SFTPEnvironment.setDefault(createMinimalEnv());
+            try {
+                Path path = assertDoesNotThrow(() -> provider.getPath(uri));
+                assertNotEquals(uri, path.toUri());
+                assertEquals("", path.toString());
+                assertEquals("/foo", path.toAbsolutePath().toString());
+                assertTrue(Files.exists(path));
                 assertDoesNotThrow(() -> path.getFileSystem().close());
             } finally {
                 SFTPEnvironment.setDefault(null);
