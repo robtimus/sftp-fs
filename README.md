@@ -16,20 +16,30 @@ If the SFTP file system library is available on the class path, it will register
             .withUserInfo(userInfo);
     FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
 
-Note that, for security reasons, it's not allowed to pass the credentials as part of the URI when creating a file system. It must be passed through the environment, as shown above.
-
 ### Providing credentials
 
-There are a few ways to provide credentials. The easiest way is to call [withUserInfo](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withUserInfo-com.jcraft.jsch.UserInfo-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance with a [UserInfo](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/UserInfo.html) object to provide the password, and if necessary the passphrase. The `sftp-fs` library provides class [SimpleUserInfo](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SimpleUserInfo.html) to provide a fixed password and passphrase. Note that any prompt will be answered with "no". That means that you will most likely also need to set a [HostKeyRepository](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/HostKeyRepository.html) by calling [withHostKeyRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withHostKeyRepository-com.jcraft.jsch.HostKeyRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance to verify the host.
+Credentials can be provided either through the URI or through the environment, as shown above. For security reasons the latter is preferred.
 
-If the [UserInfo](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/UserInfo.html) object will only provide a fixed password and do nothing else, you can also call [withPassword](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withPassword-char:A-) on the [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance instead. This too most likely requires a [HostKeyRepository](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/HostKeyRepository.html) to be set.
+There are a few ways to provide credentials through the environment. The easiest way is to call [withUserInfo](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withUserInfo-com.jcraft.jsch.UserInfo-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance with a [UserInfo](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraft.jsch/com/jcraft/jsch/UserInfo.html) object to provide the password, and if necessary the passphrase. The `sftp-fs` library provides class [SimpleUserInfo](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SimpleUserInfo.html) to provide a fixed password and passphrase. Note that any prompt will be answered with "no". That means that you will most likely also need to set a [HostKeyRepository](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraft.jsch/com/jcraft/jsch/HostKeyRepository.html) by calling [withHostKeyRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withHostKeyRepository-com.jcraft.jsch.HostKeyRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance to verify the host.
 
-Instead of using a password, it's also possible to use other authentication methods using an [IdentityRepository](https://epaul.github.io/jsch-documentation/javadoc/com/jcraft/jsch/IdentityRepository.html), which can be set by calling [withIdentityRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withIdentityRepository-com.jcraft.jsch.IdentityRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance. The following code snippet shows how you can use pageant to authenticate:
+If the [UserInfo](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraft.jsch/com/jcraft/jsch/UserInfo.html) object will only provide a fixed password and do nothing else, you can also call [withPassword](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withPassword-char:A-) on the [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance instead. This too most likely requires a [HostKeyRepository](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraft.jsch/com/jcraft/jsch/HostKeyRepository.html) to be set.
+
+Instead of using a password, it's also possible to use other authentication methods using an [IdentityRepository](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraft.jsch/com/jcraft/jsch/IdentityRepository.html), which can be set by calling [withIdentityRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withIdentityRepository-com.jcraft.jsch.IdentityRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance. The following code snippet shows how you can use pageant to authenticate:
 
     SFTPEnvironment env = new SFTPEnvironment()
             .withUsername(username)
             .withIdentityRepository(new AgentIdentityRepository(new PageantConnector()));
     FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
+
+### Default directory
+
+The default directory can be provided through the URI or trough the environment using [withDefaultDirectory](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withDefaultDirectory-java.lang.String-), as follows:
+
+| URI path | No default directory in the environment             | Default directory in the environment                |
+|----------|-----------------------------------------------------|-----------------------------------------------------|
+| None     | The default directory is defined by the SFTP server | The default directory is defined by the environment |
+| `/`      | The default directory is `/`                        | The default directory is defined by the environment |
+| Other    | The default directory is equal to the URI path      | Not allowed                                         |
 
 ## Creating paths
 
@@ -40,7 +50,7 @@ After a file system has been created, [Paths](https://docs.oracle.com/javase/8/d
     // created with credentials
     Path path2 = Paths.get(URI.create("sftp://username@example.org"));
 
-If the username in the URI does not match the username used to create the file system, this will cause a [FileSystemNotFoundException](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystemNotFoundException.html) to be thrown.
+If the username in the URI does not match the username used to create the file system, or if no file system has been created for the URI, a new file system will be created. This works like [Creating file systems](#creating-file-systems). Since no environment can be provided this way, settings can still be provided through [SFTPEnvironment.setDefault](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#setDefault-com.github.robtimus.filesystems.sftp.SFTPEnvironment-) and query parameters; see usages of [QueryParam](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/class-use/SFTPEnvironment.QueryParam.html) and [QueryParams](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/class-use/SFTPEnvironment.QueryParams.html) for the possible query parameters. If creating a new file system fails, a [FileSystemNotFoundException](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystemNotFoundException.html) will be thrown.
 
 ## Attributes
 
