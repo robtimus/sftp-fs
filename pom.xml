@@ -71,7 +71,7 @@
 
   <properties>
     <version.fs-core>2.3</version.fs-core>
-    <version.jsch>0.2.13</version.jsch>
+    <version.jsch>0.2.15</version.jsch>
     <version.junit-support>2.2</version.junit-support>
     <version.simple-pool>1.0</version.simple-pool>
     <version.slf4j>1.7.36</version.slf4j>
