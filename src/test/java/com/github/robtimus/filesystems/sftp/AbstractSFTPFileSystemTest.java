@@ -397,7 +397,6 @@ abstract class AbstractSFTPFileSystemTest {
 
         assertNotNull(modified);
         assertEquals(expected, modified);
-        //expected.forEach((key, value) -> assertThat(modified, hasEntry(key, value)));
     }
 
     private static final class ExceptionFactoryWrapper implements FileSystemExceptionFactory {
