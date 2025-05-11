@@ -11,10 +11,12 @@ The `sftp-fs` library provides support for SFTP NIO.2 file systems, allowing SFT
 
 If the SFTP file system library is available on the class path, it will register a [FileSystemProvider](https://docs.oracle.com/javase/8/docs/api/java/nio/file/spi/FileSystemProvider.html) for scheme `sftp`. This allows you to create SFTP file systems using the `newFileSystem` methods of class [FileSystems](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystems.html). You can use class [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) to help create the environment maps for those methods:
 
-    SFTPEnvironment env = new SFTPEnvironment()
-            .withUsername(username)
-            .withUserInfo(userInfo);
-    FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
+```java
+SFTPEnvironment env = new SFTPEnvironment()
+        .withUsername(username)
+        .withUserInfo(userInfo);
+FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
+```
 
 ### Providing credentials
 
@@ -26,10 +28,12 @@ If the [UserInfo](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraf
 
 Instead of using a password, it's also possible to use other authentication methods using an [IdentityRepository](https://javadoc.io/doc/com.github.mwiede/jsch/latest/com.jcraft.jsch/com/jcraft/jsch/IdentityRepository.html), which can be set by calling [withIdentityRepository](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#withIdentityRepository-com.jcraft.jsch.IdentityRepository-) on an [SFTPEnvironment](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html) instance. The following code snippet shows how you can use pageant to authenticate:
 
-    SFTPEnvironment env = new SFTPEnvironment()
-            .withUsername(username)
-            .withIdentityRepository(new AgentIdentityRepository(new PageantConnector()));
-    FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
+```java
+SFTPEnvironment env = new SFTPEnvironment()
+        .withUsername(username)
+        .withIdentityRepository(new AgentIdentityRepository(new PageantConnector()));
+FileSystem fs = FileSystems.newFileSystem(URI.create("sftp://example.org"), env);
+```
 
 ### Default directory
 
@@ -45,10 +49,12 @@ The default directory can be provided through the URI or trough the environment 
 
 After a file system has been created, [Paths](https://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html) can be created through the file system itself using its [getPath](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPath-java.lang.String-java.lang.String...-) method. As long as the file system is not closed, it's also possible to use [Paths.get](https://docs.oracle.com/javase/8/docs/api/java/nio/file/Paths.html#get-java.net.URI-). Note that if the file system was created with credentials, the username must be part of the URL. For instance:
 
-    // created without credentials
-    Path path1 = Paths.get(URI.create("sftp://example.org"));
-    // created with credentials
-    Path path2 = Paths.get(URI.create("sftp://username@example.org"));
+```java
+// created without credentials
+Path path1 = Paths.get(URI.create("sftp://example.org"));
+// created with credentials
+Path path2 = Paths.get(URI.create("sftp://username@example.org"));
+```
 
 If the username in the URI does not match the username used to create the file system, or if no file system has been created for the URI, a new file system will be created. This works like [Creating file systems](#creating-file-systems). Since no environment can be provided this way, settings can still be provided through [SFTPEnvironment.setDefault](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/SFTPEnvironment.html#setDefault-com.github.robtimus.filesystems.sftp.SFTPEnvironment-) and query parameters; see usages of [QueryParam](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/class-use/SFTPEnvironment.QueryParam.html) and [QueryParams](https://robtimus.github.io/sftp-fs/apidocs/com/github/robtimus/filesystems/sftp/class-use/SFTPEnvironment.QueryParams.html) for the possible query parameters. If creating a new file system fails, a [FileSystemNotFoundException](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystemNotFoundException.html) will be thrown.
 
