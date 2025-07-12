@@ -27,7 +27,7 @@
   </parent>
 
   <artifactId>sftp-fs</artifactId>
-  <version>3.3.2</version>
+  <version>3.4-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>sftp-fs</name>
@@ -60,7 +60,7 @@
   <scm>
     <connection>scm:git:git@github.com:robtimus/sftp-fs.git</connection>
     <developerConnection>scm:git:git@github.com:robtimus/sftp-fs.git</developerConnection>
-    <tag>3.3.2</tag>
+    <tag>HEAD</tag>
     <url>https://github.com/robtimus/sftp-fs</url>
   </scm>
 
