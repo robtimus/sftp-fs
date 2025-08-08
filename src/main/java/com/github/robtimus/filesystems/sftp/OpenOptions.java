@@ -33,14 +33,14 @@ import com.github.robtimus.filesystems.Messages;
  */
 final class OpenOptions {
 
-    public final boolean read;
-    public final boolean write;
-    public final boolean append;
-    public final boolean create;
-    public final boolean createNew;
-    public final boolean deleteOnClose;
+    final boolean read;
+    final boolean write;
+    final boolean append;
+    final boolean create;
+    final boolean createNew;
+    final boolean deleteOnClose;
 
-    public final Collection<? extends OpenOption> options;
+    final Collection<? extends OpenOption> options;
 
     private OpenOptions(boolean read, boolean write, boolean append, boolean create, boolean createNew, boolean deleteOnClose,
             Collection<? extends OpenOption> options) {
