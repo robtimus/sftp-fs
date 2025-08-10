@@ -147,6 +147,7 @@ final class SSHChannelPool {
             }
         }
 
+        @SuppressWarnings("resource")
         InputStream newInputStream(String path, OpenOptions options) throws IOException {
             assert options.read;
 
@@ -234,6 +235,7 @@ final class SSHChannelPool {
             }
         }
 
+        @SuppressWarnings("resource")
         OutputStream newOutputStream(String path, OpenOptions options) throws IOException {
             assert options.write;
 
