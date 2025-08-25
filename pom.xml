@@ -22,7 +22,7 @@
   <parent>
     <groupId>com.github.robtimus</groupId>
     <artifactId>robtimus-parent</artifactId>
-    <version>1.17</version>
+    <version>1.18</version>
     <relativePath />
   </parent>
 
