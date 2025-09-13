@@ -15,6 +15,11 @@
  * limitations under the License.
  */
 
+/**
+ * An SFTP NIO.2 file system.
+ *
+ * @provides java.nio.file.spi.FileSystemProvider
+ */
 module com.github.robtimus.filesystems.sftp {
     requires com.github.robtimus.filesystems;
     requires transitive com.jcraft.jsch;

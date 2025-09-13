@@ -19,7 +19,6 @@ package com.github.robtimus.filesystems.sftp;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
@@ -30,6 +29,7 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -1137,11 +1137,7 @@ public class SFTPEnvironment implements Map<String, Object> {
         }
 
         private String decode(String value) {
-            try {
-                return URLDecoder.decode(value, "UTF-8"); //$NON-NLS-1$
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException(e);
-            }
+            return URLDecoder.decode(value, StandardCharsets.UTF_8);
         }
 
         private SFTPPoolConfig.Builder poolConfigBuilder() {

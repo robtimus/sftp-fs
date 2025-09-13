@@ -65,7 +65,6 @@ import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
 import java.nio.file.attribute.UserPrincipalLookupService;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -120,8 +119,8 @@ class SFTPFileSystem extends FileSystem {
         this.provider = Objects.requireNonNull(provider);
 
         SFTPPath rootPath = new SFTPPath(this, ROOT_PATH);
-        this.rootDirectories = Collections.singleton(rootPath);
-        this.fileStores = Collections.singleton(new SFTPFileStore(rootPath));
+        this.rootDirectories = Set.of(rootPath);
+        this.fileStores = Set.of(new SFTPFileStore(rootPath));
 
         this.channelPool = new SSHChannelPool(uri.getHost(), uri.getPort(), env);
         this.uri = Objects.requireNonNull(uri);

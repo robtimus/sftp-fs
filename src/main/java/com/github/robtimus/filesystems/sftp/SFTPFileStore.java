@@ -71,6 +71,7 @@ class SFTPFileStore extends FileStore {
         return path.getUnallocatedSpace();
     }
 
+    @Override
     public long getBlockSize() throws IOException {
         return path.getBlockSize();
     }
