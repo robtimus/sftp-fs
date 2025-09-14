@@ -84,7 +84,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import com.github.robtimus.filesystems.Messages;
-import com.github.robtimus.filesystems.attribute.FileAttributeViewMetadata;
 import com.github.robtimus.filesystems.attribute.SimpleGroupPrincipal;
 import com.github.robtimus.filesystems.attribute.SimpleUserPrincipal;
 import com.jcraft.jsch.SftpException;
@@ -2637,21 +2636,6 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
                     () -> provider.readAttributes(path, "zipfs:*"));
             assertChainEquals(Messages.fileSystemProvider().unsupportedFileAttributeView("zipfs"), exception);
         }
-    }
-
-    @Test
-    void testPrefixAttributes() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("size", 1L);
-        attributes.put("isDirectory", "false");
-        attributes.put("owner", new SimpleUserPrincipal("test"));
-
-        Map<String, Object> expected = new HashMap<>();
-        expected.put("posix:size", 1L);
-        expected.put("posix:isDirectory", "false");
-        expected.put("posix:owner", new SimpleUserPrincipal("test"));
-
-        assertEquals(expected, SFTPFileSystem.prefixAttributes(attributes, FileAttributeViewMetadata.POSIX));
     }
 
     @Nested

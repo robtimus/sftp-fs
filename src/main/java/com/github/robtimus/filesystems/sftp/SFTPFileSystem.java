@@ -74,7 +74,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import com.github.robtimus.filesystems.AbstractDirectoryStream;
 import com.github.robtimus.filesystems.FileSystemProviderSupport;
 import com.github.robtimus.filesystems.Messages;
@@ -97,11 +96,6 @@ import com.jcraft.jsch.SftpStatVFS;
  * @author Rob Spoor
  */
 class SFTPFileSystem extends FileSystem {
-
-    // TODO: remove these two and their usages as part of the next major release
-    @SuppressWarnings("nls")
-    private static final String PREFIX_ATTRIBUTES_PROPERTY = SFTPFileSystem.class.getPackage().getName() + ".prefixAttributes";
-    private static final boolean PREFIX_ATTRIBUTES = Boolean.getBoolean(PREFIX_ATTRIBUTES_PROPERTY);
 
     static final FileAttributeViewCollection VIEWS = FileAttributeViewCollection.withViews(BASIC, FILE_OWNER, POSIX);
 
@@ -803,19 +797,7 @@ class SFTPFileSystem extends FileSystem {
 
         Map<String, Object> result = new HashMap<>();
         populateAttributeMap(result, fileAttributes, attributeNames);
-        return prefixAttributesIfNeeded(result, view);
-    }
-
-    private static Map<String, Object> prefixAttributesIfNeeded(Map<String, Object> attributes, FileAttributeViewMetadata view) {
-        return PREFIX_ATTRIBUTES
-                ? prefixAttributes(attributes, view)
-                : attributes;
-    }
-
-    static Map<String, Object> prefixAttributes(Map<String, Object> attributes, FileAttributeViewMetadata view) {
-        String prefix = view.viewName() + ":"; //$NON-NLS-1$
-        return attributes.entrySet().stream()
-                .collect(Collectors.toMap(e -> prefix + e.getKey(), Map.Entry::getValue));
+        return result;
     }
 
     void setAttribute(SFTPPath path, String attribute, Object value, boolean followLinks) throws IOException {
