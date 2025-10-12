@@ -131,6 +131,7 @@ class SFTPFileSystem extends FileSystem {
 
     @Override
     public void close() throws IOException {
+        // Using a Cleaner for this will not help anything, because the provider will keep a reference until this method is called
         if (open.getAndSet(false)) {
             provider.removeFileSystem(uri);
             channelPool.close();

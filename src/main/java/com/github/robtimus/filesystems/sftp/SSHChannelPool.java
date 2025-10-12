@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.lang.ref.Cleaner;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import com.github.robtimus.filesystems.CleanerSupport;
 import com.github.robtimus.pool.Pool;
 import com.github.robtimus.pool.PoolConfig;
 import com.github.robtimus.pool.PoolLogger;
@@ -47,6 +49,8 @@ import com.jcraft.jsch.SftpStatVFS;
  * @author Rob Spoor
  */
 final class SSHChannelPool {
+
+    private static final Cleaner CLEANER = Cleaner.create();
 
     private final JSch jsch;
 
@@ -151,29 +155,42 @@ final class SSHChannelPool {
         InputStream newInputStream(String path, OpenOptions options) throws IOException {
             assert options.read;
 
+            boolean deleteOnClose = options.deleteOnClose;
             try {
                 InputStream in = channelSftp.get(path);
-                in = new SFTPInputStream(path, in, options.deleteOnClose);
-                addReference(in);
-                return in;
+
+                // The reference will be closed when the cleanable is invoked
+                Reference<IOException> reference = addReference();
+                CleanerSupport.CleanAction cleanAction = () -> close(in, reference, path, deleteOnClose);
+
+                InputStream result = new SFTPInputStream(in, cleanAction);
+
+                logEvent(() -> SFTPMessages.log.createdInputStream(path));
+
+                return result;
             } catch (SftpException e) {
                 throw exceptionFactory.createNewInputStreamException(path, e);
             }
         }
 
+        private void close(InputStream in, Reference<IOException> reference, String path, boolean deleteOnClose) throws IOException { // NOSONAR
+            try (reference; in) {
+                // This block will close in first, reference second, and always close both
+            }
+            if (deleteOnClose) {
+                delete(path, false);
+            }
+            logEvent(() -> SFTPMessages.log.closedInputStream(path));
+        }
+
         private final class SFTPInputStream extends InputStream {
 
-            private final String path;
             private final InputStream in;
-            private final boolean deleteOnClose;
+            private final Cleaner.Cleanable cleanable;
 
-            private boolean open = true;
-
-            private SFTPInputStream(String path, InputStream in, boolean deleteOnClose) {
-                this.path = path;
+            private SFTPInputStream(InputStream in, CleanerSupport.CleanAction cleanAction) {
                 this.in = in;
-                this.deleteOnClose = deleteOnClose;
-                logEvent(() -> SFTPMessages.log.createdInputStream(path));
+                this.cleanable = CleanerSupport.register(CLEANER, this, cleanAction);
             }
 
             @Override
@@ -203,20 +220,7 @@ final class SSHChannelPool {
 
             @Override
             public void close() throws IOException {
-                if (open) {
-                    try {
-                        in.close();
-                    } finally {
-                        // always finalize the stream, to prevent pool starvation
-                        // set open to false as well, to prevent finalizing the stream twice
-                        open = false;
-                        removeReference(this);
-                    }
-                    if (deleteOnClose) {
-                        delete(path, false);
-                    }
-                    logEvent(() -> SFTPMessages.log.closedInputStream(path));
-                }
+                CleanerSupport.clean(cleanable);
             }
 
             @Override
@@ -240,29 +244,42 @@ final class SSHChannelPool {
             assert options.write;
 
             int mode = options.append ? ChannelSftp.APPEND : ChannelSftp.OVERWRITE;
+            boolean deleteOnClose = options.deleteOnClose;
             try {
                 OutputStream out = channelSftp.put(path, mode);
-                out = new SFTPOutputStream(path, out, options.deleteOnClose);
-                addReference(out);
-                return out;
+
+                // The reference will be closed when the cleanable is invoked
+                Reference<IOException> reference = addReference();
+                CleanerSupport.CleanAction cleanAction = () -> close(out, reference, path, deleteOnClose);
+
+                OutputStream result = new SFTPOutputStream(out, cleanAction);
+
+                logEvent(() -> SFTPMessages.log.createdOutputStream(path));
+
+                return result;
             } catch (SftpException e) {
                 throw exceptionFactory.createNewOutputStreamException(path, e, options.options);
             }
         }
 
+        private void close(OutputStream out, Reference<IOException> reference, String path, boolean deleteOnClose) throws IOException { // NOSONAR
+            try (reference; out) {
+                // This block will close out first, reference second, and always close both
+            }
+            if (deleteOnClose) {
+                delete(path, false);
+            }
+            logEvent(() -> SFTPMessages.log.closedOutputStream(path));
+        }
+
         private final class SFTPOutputStream extends OutputStream {
 
-            private final String path;
             private final OutputStream out;
-            private final boolean deleteOnClose;
+            private final Cleaner.Cleanable cleanable;
 
-            private boolean open = true;
-
-            private SFTPOutputStream(String path, OutputStream out, boolean deleteOnClose) {
-                this.path = path;
+            private SFTPOutputStream(OutputStream out, CleanerSupport.CleanAction cleanAction) {
                 this.out = out;
-                this.deleteOnClose = deleteOnClose;
-                logEvent(() -> SFTPMessages.log.createdOutputStream(path));
+                this.cleanable = CleanerSupport.register(CLEANER, this, cleanAction);
             }
 
             @Override
@@ -287,20 +304,7 @@ final class SSHChannelPool {
 
             @Override
             public void close() throws IOException {
-                if (open) {
-                    try {
-                        out.close();
-                    } finally {
-                        // always finalize the stream, to prevent pool starvation
-                        // set open to false as well, to prevent finalizing the stream twice
-                        open = false;
-                        removeReference(this);
-                    }
-                    if (deleteOnClose) {
-                        delete(path, false);
-                    }
-                    logEvent(() -> SFTPMessages.log.closedOutputStream(path));
-                }
+                CleanerSupport.clean(cleanable);
             }
         }
 
