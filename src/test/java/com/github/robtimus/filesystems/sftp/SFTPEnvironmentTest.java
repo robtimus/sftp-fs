@@ -239,6 +239,7 @@ class SFTPEnvironmentTest {
                 + "&hostKeyAlias=hka"
                 + "&serverAliveInterval=15"
                 + "&serverAliveCountMax=20"
+                + "&knownHosts=known_hosts"
                 + "&agentForwarding=true"
                 + "&filenameEncoding=ASCII"
                 + "&defaultDir=/home"
@@ -261,6 +262,7 @@ class SFTPEnvironmentTest {
                 .withHostKeyAlias("hka")
                 .withServerAliveInterval(15)
                 .withServerAliveCountMax(20)
+                .withKnownHosts(new File("known_hosts"))
                 .withAgentForwarding(true)
                 .withFilenameEncoding(StandardCharsets.US_ASCII)
                 .withDefaultDirectory("/home");

@@ -467,6 +467,7 @@ public class SFTPEnvironment implements Map<String, Object> {
      * @see #withHostKeyRepository(HostKeyRepository)
      * @since 1.2
      */
+    @QueryParam(KNOWN_HOSTS)
     public SFTPEnvironment withKnownHosts(File knownHosts) {
         Objects.requireNonNull(knownHosts);
         put(KNOWN_HOSTS, knownHosts);
@@ -1088,6 +1089,9 @@ public class SFTPEnvironment implements Map<String, Object> {
             switch (name) {
                 case CONNECT_TIMEOUT:
                     env.withConnectTimeout(Integer.parseInt(value));
+                    break;
+                case KNOWN_HOSTS:
+                    env.withKnownHosts(new File(value));
                     break;
                 case TIMEOUT_QUERY_PARAM:
                     env.withTimeout(Integer.parseInt(value));
