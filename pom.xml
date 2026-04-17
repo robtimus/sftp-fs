@@ -73,8 +73,8 @@
     <version.java>11</version.java>
 
     <version.fs-core>3.0</version.fs-core>
-    <version.jsch>2.27.3</version.jsch>
-    <version.junit-support>3.1</version.junit-support>
+    <version.jsch>2.28.0</version.jsch>
+    <version.junit-support>3.2</version.junit-support>
     <version.simple-pool>2.0</version.simple-pool>
     <version.slf4j>1.7.36</version.slf4j>
     <version.sshd-sftp>2.11.0</version.sshd-sftp>
