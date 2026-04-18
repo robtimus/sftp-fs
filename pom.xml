@@ -148,7 +148,7 @@
           <configuration>
             <sourcepath>${project.basedir}/src/main/java</sourcepath>
             <links>
-              <link>https://robtimus.github.io/fs-core/apidocs/</link>s
+              <link>https://robtimus.github.io/fs-core/apidocs/</link>
               <link>https://javadoc.io/doc/com.github.mwiede/jsch/latest/</link>
             </links>
           </configuration>
