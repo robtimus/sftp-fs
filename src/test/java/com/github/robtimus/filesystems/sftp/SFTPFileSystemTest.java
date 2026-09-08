@@ -21,6 +21,7 @@ import static com.github.robtimus.filesystems.SimpleAbstractPath.CURRENT_DIR;
 import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,6 +76,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -144,6 +146,11 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         SFTPPath expectedPath = createPath(expected);
         Path actual = createPath(path).toAbsolutePath();
         assertEquals(expectedPath, actual);
+    }
+
+    private Matcher<Long> directorySize() {
+        // On Windows this is usually 0, on Linux it may be 0 or 4096, depending on the sshd-sftp version
+        return oneOf(0L, 4096L);
     }
 
     @Nested
@@ -2062,8 +2069,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             PosixFileAttributes attributes = provider().readAttributes(createPath("/foo"), PosixFileAttributes.class);
 
-            // Directories always have size 0 when using sshd-core
-            assertEquals(0, attributes.size());
+            assertThat(attributes.size(), directorySize());
             assertNotNull(attributes.owner().getName());
             assertNotNull(attributes.group().getName());
             assertNotNull(attributes.permissions());
@@ -2079,8 +2085,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             PosixFileAttributes attributes = provider().readAttributes(createPath("/foo"), PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
 
-            // Directories always have size 0 when using sshd-core
-            assertEquals(0, attributes.size());
+            assertThat(attributes.size(), directorySize());
             assertNotNull(attributes.owner().getName());
             assertNotNull(attributes.group().getName());
             assertNotNull(attributes.permissions());
@@ -2096,8 +2101,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         void testCurrentDirectory(String dir) throws IOException {
             PosixFileAttributes attributes = provider().readAttributes(createPath(dir), PosixFileAttributes.class);
 
-            // Directories always have size 0 when using sshd-core
-            assertEquals(0, attributes.size());
+            assertThat(attributes.size(), directorySize());
             assertNotNull(attributes.owner().getName());
             assertNotNull(attributes.group().getName());
             assertNotNull(attributes.permissions());
@@ -2158,8 +2162,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             PosixFileAttributes attributes = provider().readAttributes(createPath("/bar"), PosixFileAttributes.class);
 
-            // Directories always have size 0 when using sshd-core
-            assertEquals(0, attributes.size());
+            assertThat(attributes.size(), directorySize());
             assertNotNull(attributes.owner().getName());
             assertNotNull(attributes.group().getName());
             assertNotNull(attributes.permissions());
@@ -2299,9 +2302,9 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "size,isDirectory");
             Map<String, Object> expected = new HashMap<>();
-            // Directories always have size 0 when using sshd-core
-            expected.put("size", 0L);
             expected.put("isDirectory", true);
+
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertEquals(expected, attributes);
         }
 
@@ -2322,20 +2325,20 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "*");
             Map<String, Object> expected = new HashMap<>();
-            // Directories always have size 0 when using sshd-core
-            expected.put("size", 0L);
             expected.put("isRegularFile", false);
             expected.put("isDirectory", true);
             expected.put("isSymbolicLink", false);
             expected.put("isOther", false);
             expected.put("fileKey", null);
 
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
             assertEquals(expected, attributes);
 
             attributes = provider().readAttributes(createPath("/foo"), "lastModifiedTime,*");
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
@@ -2373,9 +2376,9 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "basic:size,isDirectory");
             Map<String, Object> expected = new HashMap<>();
-            // Directories always have size 0 when using sshd-core
-            expected.put("size", 0L);
             expected.put("isDirectory", true);
+
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertEquals(expected, attributes);
         }
 
@@ -2396,20 +2399,20 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "basic:*");
             Map<String, Object> expected = new HashMap<>();
-            // Directories always have size 0 when using sshd-core
-            expected.put("size", 0L);
             expected.put("isRegularFile", false);
             expected.put("isDirectory", true);
             expected.put("isSymbolicLink", false);
             expected.put("isOther", false);
             expected.put("fileKey", null);
 
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
             assertEquals(expected, attributes);
 
             attributes = provider().readAttributes(createPath("/foo"), "basic:lastModifiedTime,*");
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
@@ -2487,8 +2490,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             addDirectory("/foo");
 
             Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:size,owner,group");
-            // Directories always have size 0 when using sshd-core
-            Map<String, ?> expected = Collections.singletonMap("size", 0L);
+            Map<String, ?> expected = Collections.emptyMap();
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("owner"));
             assertNotNull(attributes.remove("group"));
             assertEquals(expected, attributes);
@@ -2511,14 +2514,13 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
 
             Map<String, Object> attributes = provider().readAttributes(createPath("/foo"), "posix:*");
             Map<String, Object> expected = new HashMap<>();
-            // Directories always have size 0 when using sshd-core
-            expected.put("size", 0L);
             expected.put("isRegularFile", false);
             expected.put("isDirectory", true);
             expected.put("isSymbolicLink", false);
             expected.put("isOther", false);
             expected.put("fileKey", null);
 
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
@@ -2528,6 +2530,7 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
             assertEquals(expected, attributes);
 
             attributes = provider().readAttributes(createPath("/foo"), "posix:lastModifiedTime,*");
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
@@ -2574,20 +2577,20 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
         void testCurrentDirectory(String dir) throws IOException {
             Map<String, Object> attributes = provider().readAttributes(createPath(dir), "*");
             Map<String, Object> expected = new HashMap<>();
-            // Directories always have size 0 when using sshd-core
-            expected.put("size", 0L);
             expected.put("isRegularFile", false);
             expected.put("isDirectory", true);
             expected.put("isSymbolicLink", false);
             expected.put("isOther", false);
             expected.put("fileKey", null);
 
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
             assertEquals(expected, attributes);
 
             attributes = provider().readAttributes(createPath(dir), "lastModifiedTime,*");
+            assertThat(assertInstanceOf(Long.class, attributes.remove("size")), directorySize());
             assertNotNull(attributes.remove("lastModifiedTime"));
             assertNotNull(attributes.remove("lastAccessTime"));
             assertNotNull(attributes.remove("creationTime"));
