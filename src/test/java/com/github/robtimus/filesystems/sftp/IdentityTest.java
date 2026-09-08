@@ -105,7 +105,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
-        @SuppressWarnings("deprecation")
+        @SuppressWarnings({ "deprecation", "removal" })
         void testPrivateKeyFileAndNullStringPassphrase() throws JSchException {
             Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, (String) null);
 
@@ -117,7 +117,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
-        @SuppressWarnings("deprecation")
+        @SuppressWarnings({ "deprecation", "removal" })
         void testPrivateKeyFileAndNonNullStringPassphrase() throws JSchException {
             Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
 
@@ -289,7 +289,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
             }
 
             @Test
-            @SuppressWarnings("deprecation")
+            @SuppressWarnings("removal")
             void testPrivateKeyFileAndNullStringPassphrase() throws IOException {
                 Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, (String) null);
 
@@ -297,7 +297,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
             }
 
             @Test
-            @SuppressWarnings("deprecation")
+            @SuppressWarnings("removal")
             void testPrivateKeyFileAndNonNullStringPassphrase() throws IOException {
                 Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
 
