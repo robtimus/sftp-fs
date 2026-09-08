@@ -18,6 +18,7 @@
 package com.github.robtimus.filesystems.sftp;
 
 import static com.github.robtimus.junit.support.ThrowableAssertions.assertChainEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -57,6 +58,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import com.github.robtimus.filesystems.Messages;
 import com.github.robtimus.filesystems.sftp.SFTPEnvironment.AppendedConfig;
 import com.jcraft.jsch.ChannelSftp;
@@ -364,9 +366,11 @@ class SFTPEnvironmentTest {
             Session session = mock(Session.class);
             env.initialize(session);
 
+            ArgumentCaptor<byte[]> passwordCaptor = ArgumentCaptor.forClass(byte[].class);
+
             verify(session).setProxy((Proxy) env.get("proxy"));
             verify(session).setUserInfo((UserInfo) env.get("userInfo"));
-            verify(session).setPassword(new String((char[]) env.get("password")));
+            verify(session).setPassword(passwordCaptor.capture());
             verify(session).setConfig((Properties) env.get("config"));
             verify(session).setSocketFactory((SocketFactory) env.get("socketFactory"));
             verify(session).setTimeout((int) env.get("timeOut"));
@@ -375,6 +379,14 @@ class SFTPEnvironmentTest {
             verify(session).setServerAliveInterval((int) env.get("serverAliveInterval"));
             verify(session).setServerAliveCountMax((int) env.get("serverAliveCountMax"));
             verifyNoMoreInteractions(session);
+
+            char[] expectedPassword = assertInstanceOf(char[].class, env.get("password"));
+            // The password is a UUID, so a direct char -> byte conversion will work
+            byte[] expectedPasswordBytes = new byte[expectedPassword.length];
+            for (int i = 0; i < expectedPassword.length; i++) {
+                expectedPasswordBytes[i] = (byte) expectedPassword[i];
+            }
+            assertArrayEquals(expectedPasswordBytes, passwordCaptor.getValue());
         }
 
         @Test
@@ -387,7 +399,7 @@ class SFTPEnvironmentTest {
 
             verify(session).setProxy(null);
             verify(session).setUserInfo(null);
-            verify(session).setPassword((String) null);
+            verify(session).setPassword((byte[]) null);
             verify(session).setSocketFactory(null);
             verify(session).setClientVersion(null);
             verify(session).setHostKeyAlias(null);

@@ -47,13 +47,13 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
 
     private static final File PUBLIC_KEY_FILE = new File(BASE_DIR, "id_rsa.pub");
 
-    static final String PASSPHRASE_STRING = "1234567890";
+    private static final String PASSPHRASE_STRING = "1234567890";
 
     private static final byte[] PRIVATE_KEY = readContent(PRIVATE_KEY_FILE);
 
     private static final byte[] PUBLIC_KEY = readContent(PUBLIC_KEY_FILE);
 
-    private static final byte[] PASSPHRASE = PASSPHRASE_STRING.getBytes(StandardCharsets.UTF_8);
+    static final byte[] PASSPHRASE = PASSPHRASE_STRING.getBytes(StandardCharsets.UTF_8);
 
     private static final File PRIVATE_KEY_NOPASS_FILE = new File(BASE_DIR, "id_rsa_nopass");
 
@@ -105,6 +105,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
+        @SuppressWarnings("deprecation")
         void testPrivateKeyFileAndNullStringPassphrase() throws JSchException {
             Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, (String) null);
 
@@ -116,6 +117,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
         }
 
         @Test
+        @SuppressWarnings("deprecation")
         void testPrivateKeyFileAndNonNullStringPassphrase() throws JSchException {
             Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
 
@@ -287,6 +289,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
             }
 
             @Test
+            @SuppressWarnings("deprecation")
             void testPrivateKeyFileAndNullStringPassphrase() throws IOException {
                 Identity identity = Identity.fromFiles(PRIVATE_KEY_NOPASS_FILE, (String) null);
 
@@ -294,6 +297,7 @@ class IdentityTest extends AbstractSFTPFileSystemTest {
             }
 
             @Test
+            @SuppressWarnings("deprecation")
             void testPrivateKeyFileAndNonNullStringPassphrase() throws IOException {
                 Identity identity = Identity.fromFiles(PRIVATE_KEY_FILE, PASSPHRASE_STRING);
 

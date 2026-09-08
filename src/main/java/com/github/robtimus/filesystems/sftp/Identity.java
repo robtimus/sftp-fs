@@ -59,7 +59,9 @@ public final class Identity {
      * @param privateKeyFile The private key file.
      * @param passphrase The passphrase for the private key.
      * @return The created key pair.
+     * @deprecated Use {@link #fromFiles(File, byte[])} instead.
      */
+    @Deprecated
     public static Identity fromFiles(final File privateKeyFile, final String passphrase) {
         Objects.requireNonNull(privateKeyFile);
         return new Identity(jsch -> jsch.addIdentity(privateKeyFile.getAbsolutePath(), passphrase));

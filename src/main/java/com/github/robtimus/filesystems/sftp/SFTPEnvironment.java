@@ -28,6 +28,8 @@ import java.lang.annotation.Target;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystemException;
@@ -709,7 +711,14 @@ public class SFTPEnvironment implements Map<String, Object> {
     private void configurePassword(Session session) {
         if (containsKey(PASSWORD)) {
             char[] password = FileSystemProviderSupport.getValue(this, PASSWORD, char[].class, null);
-            session.setPassword(password == null ? null : new String(password));
+            if (password == null) {
+                session.setPassword((byte[]) null);
+            } else {
+                ByteBuffer buffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(password));
+                byte[] passwordBytes = new byte[buffer.limit()];
+                buffer.get(passwordBytes);
+                session.setPassword(passwordBytes);
+            }
         }
     }
 

@@ -190,7 +190,7 @@ abstract class AbstractSFTPFileSystemTest {
 
     protected static SFTPEnvironment createMinimalIdentityEnv() {
         return createMinimalEnv()
-                .withIdentity(Identity.fromFiles(IdentityTest.PRIVATE_KEY_FILE, IdentityTest.PASSPHRASE_STRING));
+                .withIdentity(Identity.fromFiles(IdentityTest.PRIVATE_KEY_FILE, IdentityTest.PASSPHRASE));
     }
 
     @BeforeEach
