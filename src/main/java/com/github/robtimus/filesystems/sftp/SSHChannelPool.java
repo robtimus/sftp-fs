@@ -174,11 +174,17 @@ final class SSHChannelPool {
         }
 
         private void close(InputStream in, Reference<IOException> reference, String path, boolean deleteOnClose) throws IOException { // NOSONAR
-            try (reference; in) {
-                // This block will close in first, reference second, and always close both
-            }
-            if (deleteOnClose) {
-                delete(path, false);
+            /*
+             * The following will close the input stream first, then delete the path if needed, then close the reference.
+             * The try-with-resources block will ensure that both the input stream and the reference will always be closed.
+             * The delete call inside the outer try-block ensures that deletion will be done while the reference is still active,
+             * making sure this channel is not used for other calls yet.
+             */
+            try (reference) {
+                in.close();
+                if (deleteOnClose) {
+                    delete(path, false);
+                }
             }
             logEvent(() -> SFTPMessages.log.closedInputStream(path));
         }
@@ -263,11 +269,17 @@ final class SSHChannelPool {
         }
 
         private void close(OutputStream out, Reference<IOException> reference, String path, boolean deleteOnClose) throws IOException { // NOSONAR
-            try (reference; out) {
-                // This block will close out first, reference second, and always close both
-            }
-            if (deleteOnClose) {
-                delete(path, false);
+            /*
+             * The following will close the output stream first, then delete the path if needed, then close the reference.
+             * The try-with-resources block will ensure that both the output stream and the reference will always be closed.
+             * The delete call inside the outer try-block ensures that deletion will be done while the reference is still active,
+             * making sure this channel is not used for other calls yet.
+             */
+            try (reference) {
+                out.close();
+                if (deleteOnClose) {
+                    delete(path, false);
+                }
             }
             logEvent(() -> SFTPMessages.log.closedOutputStream(path));
         }
