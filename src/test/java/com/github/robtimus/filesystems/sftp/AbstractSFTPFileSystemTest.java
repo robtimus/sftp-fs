@@ -132,6 +132,8 @@ abstract class AbstractSFTPFileSystemTest {
                 USERNAME.equals(username) && (PUBLIC_KEY.equals(key) || PUBLIC_KEY_NOPASS.equals(key)));
         sshServer.setSubsystemFactories(Arrays.asList(subSystemFactory));
 
+        // Important: sshd-sftp doesn't work well with custom file systems like memory-fs.
+        // It may try to call unsupported methods like Path.toFile.
         rootPath = Files.createTempDirectory("sftp-fs");
         defaultDir = rootPath.resolve("home");
         Files.createDirectory(defaultDir);

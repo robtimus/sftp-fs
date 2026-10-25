@@ -149,8 +149,8 @@ class SFTPFileSystemTest extends AbstractSFTPFileSystemTest {
     }
 
     private Matcher<Long> directorySize() {
-        // On Windows this is usually 0, on Linux it may be 0 or 4096, depending on the sshd-sftp version
-        return oneOf(0L, 4096L);
+        // On Windows this is usually 0, on Linux it may be 0, 4096 or 40
+        return oneOf(0L, 4096L, 40L);
     }
 
     @Nested
